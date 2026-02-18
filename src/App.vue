@@ -280,9 +280,7 @@
           >
             &#x21A9;
           </button>
-          <button @click="resetGameState" class="btn btn-secondary">
-            🔄
-          </button>
+          <button @click="resetGameState" class="btn btn-secondary">🔄</button>
         </div>
       </div>
     </main>

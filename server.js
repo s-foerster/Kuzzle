@@ -67,8 +67,22 @@ function cleanOldPuzzles() {
 app.use(cors());
 app.use(express.json());
 
-// Servir les fichiers statiques (pour production)
-app.use(express.static(path.join(__dirname, 'dist')));
+// Assets hachés (JS, CSS, images) → cache 1 an
+app.use('/assets', express.static(path.join(__dirname, 'dist/assets'), {
+  maxAge: '1y',
+  immutable: true,
+}));
+
+// Tout le reste de dist (dont index.html) → jamais en cache
+app.use(express.static(path.join(__dirname, 'dist'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 
 // Obtenir la date du jour au format YYYY-MM-DD
 function getTodayKey() {
@@ -244,6 +258,9 @@ app.post('/api/pregenerate-tomorrow', async (req, res) => {
 
 // Servir le frontend pour toutes les autres routes (SPA)
 app.get('*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
