@@ -11,7 +11,8 @@ const CELL_X = 1;
 const CELL_HEART = 2;
 
 // URL de l'API (utilise variable d'environnement en production)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// En dev, pointer sur localhost:3000 ; en prod (même hôte), utiliser une URL relative
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 export function useGame() {
   // État du jeu
