@@ -6,7 +6,7 @@
       @mousedown="handleMouseDown"
       @mouseup="handleMouseUp"
       @mouseleave="handleMouseUp"
-      @touchstart.passive="handleTouchStart"
+      @touchstart="handleTouchStart"
       @touchmove.prevent="handleTouchMove"
       @touchend="handleTouchEnd"
     >
@@ -112,6 +112,7 @@ function getCellFromPoint(x, y) {
 
 function handleTouchStart(e) {
   if (props.isWon) return;
+  e.preventDefault(); // Empêche les événements souris synthétiques
   isTouching.value = true;
   touchHasDragged.value = false;
   const touch = e.touches[0];
@@ -133,6 +134,9 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
+  // Empêche les événements souris synthétiques (mousedown/click) générés par le navigateur
+  // qui causeraient un double-déclenchement du cycle de la cellule
+  e.preventDefault();
   // Si pas de mouvement → traiter comme un clic
   if (!touchHasDragged.value && touchStartCell.value) {
     emit("cell-click", touchStartCell.value.row, touchStartCell.value.col);
