@@ -26,6 +26,22 @@ export function useGame() {
   // Compteur de vérifications
   const verifyCount = ref(0);
   
+  // Historique pour undo (max 50 étapes)
+  const undoHistory = ref([]);
+  const MAX_UNDO = 50;
+
+  function pushHistory() {
+    const snapshot = gameState.value.map(row => [...row]);
+    undoHistory.value.push(snapshot);
+    if (undoHistory.value.length > MAX_UNDO) undoHistory.value.shift();
+  }
+
+  function undo() {
+    if (undoHistory.value.length === 0 || isWon.value) return;
+    gameState.value = undoHistory.value.pop();
+    saveGameState();
+  }
+
   // Timer
   const elapsedTime = ref(0); // Temps écoulé en secondes
   const isPaused = ref(false);
@@ -165,6 +181,7 @@ export function useGame() {
     isPaused.value = false;
     verifyCount.value = 0;
     gameState.value = Array(puzzleSize).fill(null).map(() => Array(puzzleSize).fill(CELL_EMPTY));
+    undoHistory.value = [];
     isWon.value = false;
     saveGameState();
   }
@@ -179,6 +196,7 @@ export function useGame() {
     }
 
     // Cycle: vide → X → cœur → vide
+    pushHistory();
     const current = gameState.value[row][col];
     gameState.value[row][col] = (current + 1) % 3;
 
@@ -197,6 +215,7 @@ export function useGame() {
 
     // Placer une croix (X) seulement si la cellule est vide
     if (gameState.value[row][col] === CELL_EMPTY) {
+      pushHistory();
       gameState.value[row][col] = CELL_X;
       checkWin();
       saveGameState();
@@ -412,6 +431,8 @@ export function useGame() {
     handleCellClick,
     handleCellDrag,
     resetGameState,
+    undo,
+    undoHistory,
     checkErrors,
     isConstraintViolated,
     isConstraintComplete,

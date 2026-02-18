@@ -103,7 +103,10 @@
             <rect
               v-for="(rect, i) in demoHighlightRects"
               :key="`hl-${i}`"
-              :x="rect.x" :y="rect.y" :width="rect.w" :height="rect.h"
+              :x="rect.x"
+              :y="rect.y"
+              :width="rect.w"
+              :height="rect.h"
               :fill="demoHighlightColor"
               opacity="0.3"
               style="transition: opacity 0.3s"
@@ -239,20 +242,25 @@ const demoZones = [
 ];
 
 const demoSolution = [
-  [false, false, false, false, true,  false, true,  false],
-  [true,  false, true,  false, false, false, false, false],
-  [false, false, false, false, true,  false, true,  false],
-  [true,  false, true,  false, false, false, false, false],
-  [false, false, false, false, false, true,  false, true ],
-  [false, true,  false, true,  false, false, false, false],
-  [false, false, false, false, false, true,  false, true ],
-  [false, true,  false, true,  false, false, false, false],
+  [false, false, false, false, true, false, true, false],
+  [true, false, true, false, false, false, false, false],
+  [false, false, false, false, true, false, true, false],
+  [true, false, true, false, false, false, false, false],
+  [false, false, false, false, false, true, false, true],
+  [false, true, false, true, false, false, false, false],
+  [false, false, false, false, false, true, false, true],
+  [false, true, false, true, false, false, false, false],
 ];
 
 const demoGridCells = [];
 for (let r = 0; r < DEMO_N; r++) {
   for (let c = 0; c < DEMO_N; c++) {
-    demoGridCells.push({ row: r, col: c, zone: demoZones[r][c], heart: demoSolution[r][c] });
+    demoGridCells.push({
+      row: r,
+      col: c,
+      zone: demoZones[r][c],
+      heart: demoSolution[r][c],
+    });
   }
 }
 
@@ -269,7 +277,9 @@ function buildDemoZonePaths() {
     const set = new Set(cells.map(({ r, c }) => `${r},${c}`));
     let d = "";
     cells.forEach(({ r, c }) => {
-      const x = c * DEMO_S, y = r * DEMO_S, s = DEMO_S;
+      const x = c * DEMO_S,
+        y = r * DEMO_S,
+        s = DEMO_S;
       if (!set.has(`${r - 1},${c}`)) d += `M${x},${y} L${x + s},${y} `;
       if (!set.has(`${r + 1},${c}`)) d += `M${x},${y + s} L${x + s},${y + s} `;
       if (!set.has(`${r},${c - 1}`)) d += `M${x},${y} L${x},${y + s} `;
@@ -281,8 +291,8 @@ function buildDemoZonePaths() {
 const demoZonePaths = buildDemoZonePaths();
 
 const demoHighlightSteps = [
-  { type: "row", idx: 2,  color: "#2196F3", label: "Ligne : 2 ❤️" },
-  { type: "col", idx: 0,  color: "#E91E63", label: "Colonne : 2 ❤️" },
+  { type: "row", idx: 2, color: "#2196F3", label: "Ligne : 2 ❤️" },
+  { type: "col", idx: 0, color: "#E91E63", label: "Colonne : 2 ❤️" },
   { type: "zone", idx: 0, color: "#4CAF50", label: "Zone : 2 ❤️" },
 ];
 
@@ -291,24 +301,31 @@ const demoLabelVisible = ref(true);
 
 const demoHighlightRects = computed(() => {
   const step = demoHighlightSteps[highlightState.value];
-  const s = DEMO_S, total = DEMO_N * s;
+  const s = DEMO_S,
+    total = DEMO_N * s;
   if (step.type === "row") return [{ x: 0, y: step.idx * s, w: total, h: s }];
   if (step.type === "col") return [{ x: step.idx * s, y: 0, w: s, h: total }];
   const rects = [];
   for (let r = 0; r < DEMO_N; r++)
     for (let c = 0; c < DEMO_N; c++)
-      if (demoZones[r][c] === step.idx) rects.push({ x: c * s, y: r * s, w: s, h: s });
+      if (demoZones[r][c] === step.idx)
+        rects.push({ x: c * s, y: r * s, w: s, h: s });
   return rects;
 });
 
-const demoHighlightColor = computed(() => demoHighlightSteps[highlightState.value].color);
-const demoHighlightLabel = computed(() => demoHighlightSteps[highlightState.value].label);
+const demoHighlightColor = computed(
+  () => demoHighlightSteps[highlightState.value].color,
+);
+const demoHighlightLabel = computed(
+  () => demoHighlightSteps[highlightState.value].label,
+);
 
 let gridInterval;
 const updateGridDemo = () => {
   demoLabelVisible.value = false;
   setTimeout(() => {
-    highlightState.value = (highlightState.value + 1) % demoHighlightSteps.length;
+    highlightState.value =
+      (highlightState.value + 1) % demoHighlightSteps.length;
     demoLabelVisible.value = true;
   }, 300);
 };
@@ -451,14 +468,30 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.demo-zone-0 { background-color: #fff0f2; }
-.demo-zone-1 { background-color: #fff8f0; }
-.demo-zone-2 { background-color: #fff5fa; }
-.demo-zone-3 { background-color: #f7f0ff; }
-.demo-zone-4 { background-color: #f0f8ff; }
-.demo-zone-5 { background-color: #f0fff5; }
-.demo-zone-6 { background-color: #fffbf0; }
-.demo-zone-7 { background-color: #fef0f0; }
+.demo-zone-0 {
+  background-color: #fff0f2;
+}
+.demo-zone-1 {
+  background-color: #fff8f0;
+}
+.demo-zone-2 {
+  background-color: #fff5fa;
+}
+.demo-zone-3 {
+  background-color: #f7f0ff;
+}
+.demo-zone-4 {
+  background-color: #f0f8ff;
+}
+.demo-zone-5 {
+  background-color: #f0fff5;
+}
+.demo-zone-6 {
+  background-color: #fffbf0;
+}
+.demo-zone-7 {
+  background-color: #fef0f0;
+}
 
 .demo-heart-icon {
   width: 68%;

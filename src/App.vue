@@ -15,7 +15,11 @@
           class="header-brand"
           :class="{ 'brand-centered': view === 'landing' }"
         >
-          <img src="./assets/kuzzle_logo.png" alt="Kuzzle" class="header-logo" />
+          <img
+            src="./assets/kuzzle_logo.png"
+            alt="Kuzzle"
+            class="header-logo"
+          />
           <h1 class="brand-title">Kuzzle</h1>
         </div>
         <div class="header-actions">
@@ -223,7 +227,10 @@
             v-for="day in last7Days"
             :key="day.dateKey"
             class="cal-day"
-            :class="{ 'cal-day--active': currentArchiveDate === day.dateKey, 'cal-day--today': day.isToday }"
+            :class="{
+              'cal-day--active': currentArchiveDate === day.dateKey,
+              'cal-day--today': day.isToday,
+            }"
             @click="loadArchiveDay(day)"
           >
             <span class="cal-weekday">{{ day.weekday }}</span>
@@ -265,8 +272,16 @@
           >
             Vérifier
           </button>
+          <button
+            @click="undo"
+            class="btn btn-secondary"
+            :disabled="undoHistory.length === 0 || isWon"
+            title="Annuler le dernier coup"
+          >
+            &#x21A9;
+          </button>
           <button @click="resetGameState" class="btn btn-secondary">
-            🔄 Réinitialiser
+            🔄
           </button>
         </div>
       </div>
@@ -308,6 +323,8 @@ const {
   handleCellClick,
   handleCellDrag,
   resetGameState,
+  undo,
+  undoHistory,
   checkErrors,
   togglePause,
 } = useGame();
@@ -315,8 +332,8 @@ const {
 // ===== 7 derniers jours (depuis puzzle-cache.json) =====
 function getDateKey(d) {
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -329,8 +346,13 @@ function getLast7Days() {
     const isToday = i === 0;
     days.push({
       dateKey: getDateKey(d),
-      weekday: isToday ? 'Auj' : d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '').slice(0, 3),
-      dayNum: String(d.getDate()).padStart(2, '0'),
+      weekday: isToday
+        ? "Auj"
+        : d
+            .toLocaleDateString("fr-FR", { weekday: "short" })
+            .replace(".", "")
+            .slice(0, 3),
+      dayNum: String(d.getDate()).padStart(2, "0"),
       isToday,
     });
   }
@@ -357,17 +379,24 @@ function loadArchiveDay(day) {
 }
 
 // ===== Landing — niveaux practice =====
-const PRACTICE_KEEP = ['easy_2', 'medium_1', 'medium_3', 'hard_1', 'hard_2', 'hard_3'];
+const PRACTICE_KEEP = [
+  "easy_2",
+  "medium_1",
+  "medium_3",
+  "hard_1",
+  "hard_2",
+  "hard_3",
+];
 const PRACTICE_LABELS = [
-  { label: 'Facile',    name: 'Niveau 1' },
-  { label: 'Facile',    name: 'Niveau 2' },
-  { label: 'Moyen',     name: 'Niveau 1' },
-  { label: 'Moyen',     name: 'Niveau 2' },
-  { label: 'Difficile', name: 'Niveau 1' },
-  { label: 'Difficile', name: 'Niveau 2' },
+  { label: "Facile", name: "Niveau 1" },
+  { label: "Facile", name: "Niveau 2" },
+  { label: "Moyen", name: "Niveau 1" },
+  { label: "Moyen", name: "Niveau 2" },
+  { label: "Difficile", name: "Niveau 1" },
+  { label: "Difficile", name: "Niveau 2" },
 ];
 const practiceLevels = practicePuzzlesData
-  .filter(p => PRACTICE_KEEP.includes(p.id))
+  .filter((p) => PRACTICE_KEEP.includes(p.id))
   .sort((a, b) => PRACTICE_KEEP.indexOf(a.id) - PRACTICE_KEEP.indexOf(b.id))
   .map((p, i) => ({ ...p, ...PRACTICE_LABELS[i] }));
 
@@ -1104,11 +1133,11 @@ onMounted(() => {
   transition: background 0.15s;
 }
 .cal-day:hover {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 .cal-day--active {
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 .cal-day--today.cal-day--active .cal-weekday {
   color: var(--color-primary);
