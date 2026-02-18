@@ -230,11 +230,17 @@
             :class="{
               'cal-day--active': currentArchiveDate === day.dateKey,
               'cal-day--today': day.isToday,
+              'cal-day--done': completedLevels.includes(day.dateKey),
             }"
             @click="loadArchiveDay(day)"
           >
             <span class="cal-weekday">{{ day.weekday }}</span>
             <span class="cal-num">{{ day.dayNum }}</span>
+            <span
+              v-if="completedLevels.includes(day.dateKey)"
+              class="cal-done-badge"
+              >✓</span
+            >
           </button>
         </div>
 
@@ -291,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import GameGrid from "./components/GameGrid.vue";
 import HowToPlayModal from "./components/HowToPlay/HowToPlayModal.vue";
 import HowToPlayRules from "./components/HowToPlay/HowToPlayRules.vue";
@@ -312,6 +318,7 @@ const {
   isLoading,
   error,
   formattedDate,
+  currentDate,
   checkResult,
   isPaused,
   isTimerStarted,
@@ -402,6 +409,30 @@ const practiceLevels = practicePuzzlesData
 const completedLevels = ref(
   JSON.parse(localStorage.getItem("hearts-completed-levels") || "[]"),
 );
+
+// Sauvegarder le niveau complété dans localStorage dès la victoire
+watch(isWon, (won) => {
+  if (!won || !currentDate.value) return;
+
+  let completedId;
+  if (currentDate.value.startsWith("practice_")) {
+    // ex: 'practice_easy_2' → 'easy_2'
+    completedId = currentDate.value.replace("practice_", "");
+  } else if (/^\d{8}$/.test(currentDate.value)) {
+    // YYYYMMDD → YYYY-MM-DD (pour matcher les dateKey du calendrier)
+    completedId = `${currentDate.value.slice(0, 4)}-${currentDate.value.slice(4, 6)}-${currentDate.value.slice(6, 8)}`;
+  } else {
+    completedId = currentDate.value;
+  }
+
+  if (!completedLevels.value.includes(completedId)) {
+    completedLevels.value.push(completedId);
+    localStorage.setItem(
+      "hearts-completed-levels",
+      JSON.stringify(completedLevels.value),
+    );
+  }
+});
 
 function startGame() {
   currentArchiveDate.value = todayKey;
@@ -1157,6 +1188,15 @@ onMounted(() => {
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--color-text);
+  line-height: 1;
+}
+.cal-day--done .cal-num {
+  color: var(--color-success, #22c55e);
+}
+.cal-done-badge {
+  font-size: 0.55rem;
+  font-weight: 900;
+  color: var(--color-success, #22c55e);
   line-height: 1;
 }
 
