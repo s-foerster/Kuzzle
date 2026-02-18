@@ -297,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import GameGrid from "./components/GameGrid.vue";
 import HowToPlayModal from "./components/HowToPlay/HowToPlayModal.vue";
 import HowToPlayRules from "./components/HowToPlay/HowToPlayRules.vue";
@@ -332,6 +332,7 @@ const {
   undo,
   undoHistory,
   checkErrors,
+  fillWithSolution,
   togglePause,
 } = useGame();
 
@@ -409,6 +410,38 @@ const practiceLevels = practicePuzzlesData
 const completedLevels = ref(
   JSON.parse(localStorage.getItem("hearts-completed-levels") || "[]"),
 );
+
+// ID normalisé du niveau en cours (même format que completedLevels)
+const currentLevelId = computed(() => {
+  if (!currentDate.value) return null;
+  if (currentDate.value.startsWith("practice_")) {
+    return currentDate.value.replace("practice_", "");
+  } else if (/^\d{8}$/.test(currentDate.value)) {
+    return `${currentDate.value.slice(0, 4)}-${currentDate.value.slice(4, 6)}-${currentDate.value.slice(6, 8)}`;
+  }
+  return currentDate.value;
+});
+
+const isCurrentLevelCompleted = computed(
+  () =>
+    !!currentLevelId.value &&
+    completedLevels.value.includes(currentLevelId.value),
+);
+
+// Quand on charge un niveau déjà complété, afficher la solution complète
+// On surveille `puzzle` (changement à chaque nouveau chargement, y compris le premier)
+// ET `currentDate` (changement de jour dans l'archive)
+function checkAndFillIfCompleted() {
+  nextTick(() => {
+    if (isCurrentLevelCompleted.value && !isWon.value) {
+      fillWithSolution();
+    }
+  });
+}
+watch(puzzle, (p) => {
+  if (p) checkAndFillIfCompleted();
+});
+watch(currentDate, checkAndFillIfCompleted);
 
 // Sauvegarder le niveau complété dans localStorage dès la victoire
 watch(isWon, (won) => {

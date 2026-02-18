@@ -401,6 +401,20 @@ export function useGame() {
     saveGameState();
   }, { deep: true });
 
+  // Remplir la grille avec la solution complète (cœurs + croix)
+  function fillWithSolution() {
+    if (!puzzle.value || !puzzle.value.solution) return;
+    const puzzleSize = puzzle.value.solution.length;
+    gameState.value = Array(puzzleSize).fill(null).map((_, row) =>
+      Array(puzzleSize).fill(null).map((_, col) =>
+        puzzle.value.solution[row][col] ? CELL_HEART : CELL_X
+      )
+    );
+    isWon.value = true;
+    stopTimer();
+    saveGameState();
+  }
+
   // Nettoyer le timer quand le composable est démonté
   onUnmounted(() => {
     stopTimer();
@@ -434,6 +448,7 @@ export function useGame() {
     undo,
     undoHistory,
     checkErrors,
+    fillWithSolution,
     isConstraintViolated,
     isConstraintComplete,
     getZoneName,
