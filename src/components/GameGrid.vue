@@ -20,9 +20,9 @@
         :col="cell.col"
         :is-won="isWon"
         :has-solution-heart="showSolution && !!solution?.[cell.row]?.[cell.col]"
-        @click="$emit('cell-click', cell.row, cell.col)"
         @mousedown="handleCellMouseDown(cell.row, cell.col)"
         @mouseenter="handleCellMouseEnter(cell.row, cell.col)"
+        @click="handleCellClick(cell.row, cell.col)"
       />
     </div>
   </div>
@@ -62,34 +62,57 @@ const props = defineProps({
 
 const emit = defineEmits(["cell-click", "cell-drag"]);
 
+// Flag pour ignorer les événements souris synthétiques générés après un touch
+let lastTouchEnd = 0;
+const TOUCH_MOUSE_IGNORE_DELAY = 500; // ms
+
+function isSyntheticMouseEvent() {
+  return Date.now() - lastTouchEnd < TOUCH_MOUSE_IGNORE_DELAY;
+}
+
 // ===== Mouse drag =====
 const isMouseDown = ref(false);
 const startCell = ref(null);
 const hasDragged = ref(false);
 
 function handleMouseDown() {
+  if (isSyntheticMouseEvent()) return;
   isMouseDown.value = true;
 }
 
 function handleMouseUp() {
   isMouseDown.value = false;
   startCell.value = null;
-  hasDragged.value = false;
+  // Ne pas reset hasDragged ici : handleCellClick en a besoin juste après (mouseup → click)
+  // Il sera reset dans handleCellClick ou au prochain mousedown
 }
 
 function handleCellMouseDown(row, col) {
+  if (isSyntheticMouseEvent()) return;
   isMouseDown.value = true;
   startCell.value = { row, col };
-  hasDragged.value = false;
+  hasDragged.value = false; // reset au début de chaque interaction
 }
 
 function handleCellMouseEnter(row, col) {
+  if (isSyntheticMouseEvent()) return;
   if (isMouseDown.value) {
     if (!hasDragged.value && startCell.value) {
       emit("cell-drag", startCell.value.row, startCell.value.col);
       hasDragged.value = true;
     }
     emit("cell-drag", row, col);
+  }
+}
+
+function handleCellClick(row, col) {
+  // Ignoré sur mobile : les clics sont gérés par handleTouchEnd
+  if (isSyntheticMouseEvent()) return;
+  // Sur desktop : ne pas émettre cell-click si c'était un drag
+  const wasDrag = hasDragged.value;
+  hasDragged.value = false; // reset pour la prochaine interaction
+  if (!wasDrag) {
+    emit("cell-click", row, col);
   }
 }
 
@@ -112,7 +135,6 @@ function getCellFromPoint(x, y) {
 
 function handleTouchStart(e) {
   if (props.isWon) return;
-  e.preventDefault(); // Empêche les événements souris synthétiques
   isTouching.value = true;
   touchHasDragged.value = false;
   const touch = e.touches[0];
@@ -134,9 +156,9 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-  // Empêche les événements souris synthétiques (mousedown/click) générés par le navigateur
-  // qui causeraient un double-déclenchement du cycle de la cellule
-  e.preventDefault();
+  // Mémoriser le timestamp pour ignorer les événements souris synthétiques
+  // que le navigateur génère ~300ms après un touch
+  lastTouchEnd = Date.now();
   // Si pas de mouvement → traiter comme un clic
   if (!touchHasDragged.value && touchStartCell.value) {
     emit("cell-click", touchStartCell.value.row, touchStartCell.value.col);
