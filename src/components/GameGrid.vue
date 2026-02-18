@@ -6,6 +6,9 @@
       @mousedown="handleMouseDown"
       @mouseup="handleMouseUp"
       @mouseleave="handleMouseUp"
+      @touchstart.passive="handleTouchStart"
+      @touchmove.prevent="handleTouchMove"
+      @touchend="handleTouchEnd"
     >
       <ZoneOverlay :zones="zones" :grid-size="gridSize" />
       <Cell
@@ -24,6 +27,146 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed } from "vue";
+import Cell from "./Cell.vue";
+import ZoneOverlay from "./ZoneOverlay.vue";
+
+const props = defineProps({
+  gameState: {
+    type: Array,
+    required: true,
+  },
+  zones: {
+    type: Array,
+    required: true,
+  },
+  solution: {
+    type: Array,
+    default: null,
+  },
+  showSolution: {
+    type: Boolean,
+    default: false,
+  },
+  gridSize: {
+    type: Number,
+    default: 10,
+  },
+  isWon: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["cell-click", "cell-drag"]);
+
+// ===== Mouse drag =====
+const isMouseDown = ref(false);
+const startCell = ref(null);
+const hasDragged = ref(false);
+
+function handleMouseDown() {
+  isMouseDown.value = true;
+}
+
+function handleMouseUp() {
+  isMouseDown.value = false;
+  startCell.value = null;
+  hasDragged.value = false;
+}
+
+function handleCellMouseDown(row, col) {
+  isMouseDown.value = true;
+  startCell.value = { row, col };
+  hasDragged.value = false;
+}
+
+function handleCellMouseEnter(row, col) {
+  if (isMouseDown.value) {
+    if (!hasDragged.value && startCell.value) {
+      emit("cell-drag", startCell.value.row, startCell.value.col);
+      hasDragged.value = true;
+    }
+    emit("cell-drag", row, col);
+  }
+}
+
+// ===== Touch drag =====
+const isTouching = ref(false);
+const touchStartCell = ref(null);
+const touchHasDragged = ref(false);
+
+function getCellFromPoint(x, y) {
+  // Trouve la cellule Vue sous le point (x, y)
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  const cellEl = el.closest("[data-row]");
+  if (!cellEl) return null;
+  return {
+    row: parseInt(cellEl.dataset.row),
+    col: parseInt(cellEl.dataset.col),
+  };
+}
+
+function handleTouchStart(e) {
+  if (props.isWon) return;
+  isTouching.value = true;
+  touchHasDragged.value = false;
+  const touch = e.touches[0];
+  const cell = getCellFromPoint(touch.clientX, touch.clientY);
+  touchStartCell.value = cell;
+}
+
+function handleTouchMove(e) {
+  if (!isTouching.value || props.isWon) return;
+  const touch = e.touches[0];
+  const cell = getCellFromPoint(touch.clientX, touch.clientY);
+  if (!cell) return;
+
+  if (!touchHasDragged.value && touchStartCell.value) {
+    emit("cell-drag", touchStartCell.value.row, touchStartCell.value.col);
+    touchHasDragged.value = true;
+  }
+  emit("cell-drag", cell.row, cell.col);
+}
+
+function handleTouchEnd(e) {
+  // Si pas de mouvement → traiter comme un clic
+  if (!touchHasDragged.value && touchStartCell.value) {
+    emit("cell-click", touchStartCell.value.row, touchStartCell.value.col);
+  }
+  isTouching.value = false;
+  touchStartCell.value = null;
+  touchHasDragged.value = false;
+}
+
+// Créer un tableau plat de toutes les cellules
+const allCells = computed(() => {
+  const cells = [];
+  for (let row = 0; row < props.gridSize; row++) {
+    for (let col = 0; col < props.gridSize; col++) {
+      cells.push({ row, col });
+    }
+  }
+  return cells;
+});
+
+const gridStyle = computed(() => ({
+  display: "grid",
+  gridTemplateColumns: `repeat(${props.gridSize}, 1fr)`,
+  gridTemplateRows: `repeat(${props.gridSize}, 1fr)`,
+  gap: "0",
+  width: "100%",
+  maxWidth: "480px",
+  aspectRatio: "1 / 1",
+  margin: "0 auto",
+  borderRadius: "10px",
+  overflow: "hidden",
+  border: "3px solid #2c2c3a",
+}));
+</script>
 
 <script setup>
 import { ref, computed } from "vue";

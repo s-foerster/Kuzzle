@@ -2,6 +2,8 @@
   <div
     class="cell"
     :class="cellClasses"
+    :data-row="row"
+    :data-col="col"
     @click="$emit('click')"
     :aria-label="ariaLabel"
     role="button"

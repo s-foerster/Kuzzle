@@ -222,7 +222,7 @@
         </Transition>
 
         <!-- Calendrier 7 derniers jours -->
-        <div class="archive-calendar">
+        <div v-if="!isPracticeMode" class="archive-calendar">
           <button
             v-for="day in last7Days"
             :key="day.dateKey"
@@ -301,6 +301,7 @@ import puzzleCacheData from "../puzzle-cache.json";
 
 // ===== Navigation =====
 const view = ref("landing"); // 'landing' | 'game'
+const isPracticeMode = ref(false);
 
 const isHowToPlayOpen = ref(false);
 
@@ -404,10 +405,12 @@ const completedLevels = ref(
 
 function startGame() {
   currentArchiveDate.value = todayKey;
+  isPracticeMode.value = false;
   view.value = "game";
 }
 
 function startPractice(level) {
+  isPracticeMode.value = true;
   initPracticePuzzle(level);
   view.value = "game";
 }

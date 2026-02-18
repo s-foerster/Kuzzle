@@ -43,6 +43,29 @@ function saveCache() {
   }
 }
 
+// Configurations disponibles pour la génération des puzzles
+const PUZZLE_CONFIGS = [
+  { gridSize: 10, minSmallZones: 5, smallZoneSize: 4 },
+  { gridSize: 9,  minSmallZones: 4, smallZoneSize: 3 },
+  { gridSize: 9,  minSmallZones: 5, smallZoneSize: 4 },
+  { gridSize: 10, minSmallZones: 4, smallZoneSize: 5 },
+  { gridSize: 10, minSmallZones: 4, smallZoneSize: 4 },
+];
+
+// Choisit une config de façon déterministe à partir de la clé de date
+// (même date → même config, mais distribué de façon indépendante du seed du puzzle)
+function pickConfigForDate(dateKey) {
+  // Simple hash de la date pour choisir la config
+  let h = 0x811c9dc5;
+  for (let i = 0; i < dateKey.length; i++) {
+    h ^= dateKey.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+    h = h >>> 0;
+  }
+  const idx = h % PUZZLE_CONFIGS.length;
+  return PUZZLE_CONFIGS[idx];
+}
+
 // Nettoyer les vieux puzzles (garde seulement les 7 derniers jours)
 function cleanOldPuzzles() {
   const now = new Date();
@@ -119,10 +142,10 @@ app.get('/api/daily-puzzle', async (req, res) => {
   try {
     // Générer avec la date spécifique comme seed
     const seedFromDate = todayKey.replace(/-/g, '');
+    const config = pickConfigForDate(todayKey);
+    console.log(`   └─ Config choisie: gridSize=${config.gridSize}, minSmallZones=${config.minSmallZones}, smallZoneSize=${config.smallZoneSize}`);
     const puzzle = generatePuzzleHeartsFirst(seedFromDate, {
-      gridSize: 8,
-      minSmallZones: 3,
-      smallZoneSize: 4,
+      ...config,
       checkUniqueness: true,
       maxTotalAttempts: 1000000
     });
@@ -218,7 +241,15 @@ app.post('/api/pregenerate-tomorrow', async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const puzzle = generateDailyPuzzle(tomorrow);
+    const tomorrowDateKey = tomorrowKey;
+    const seedFromDate = tomorrowDateKey.replace(/-/g, '');
+    const config = pickConfigForDate(tomorrowDateKey);
+    console.log(`   └─ Config choisie: gridSize=${config.gridSize}, minSmallZones=${config.minSmallZones}, smallZoneSize=${config.smallZoneSize}`);
+    const puzzle = generatePuzzleHeartsFirst(seedFromDate, {
+      ...config,
+      checkUniqueness: true,
+      maxTotalAttempts: 1000000
+    });
     const generationTime = Date.now() - startTime;
     
     if (!puzzle || !puzzle.metadata?.isUnique) {
@@ -279,3 +310,56 @@ app.listen(PORT, () => {
 setInterval(() => {
   cleanOldPuzzles();
 }, 24 * 60 * 60 * 1000);
+
+// Pré-génération automatique du puzzle du lendemain chaque nuit à minuit
+function scheduleMidnightPregenerate() {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 2, 0, 0); // 00h02 pour éviter les collisions de minuit exact
+  const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+  console.log(`⏰ Pré-génération auto planifiée dans ${Math.round(msUntilMidnight / 60000)} minutes`);
+
+  setTimeout(async () => {
+    const nextDay = new Date();
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextKey = nextDay.toISOString().split('T')[0];
+
+    if (!puzzleCache[nextKey]) {
+      console.log(`\n🌙 Pré-génération nocturne automatique pour ${nextKey}...`);
+      const config = pickConfigForDate(nextKey);
+      const seedFromDate = nextKey.replace(/-/g, '');
+      console.log(`   └─ Config: gridSize=${config.gridSize}, minSmallZones=${config.minSmallZones}, smallZoneSize=${config.smallZoneSize}`);
+      const startTime = Date.now();
+      try {
+        const puzzle = generatePuzzleHeartsFirst(seedFromDate, {
+          ...config,
+          checkUniqueness: true,
+          maxTotalAttempts: 1000000
+        });
+        if (puzzle && puzzle.metadata?.isUnique) {
+          puzzleCache[nextKey] = {
+            puzzle: { zones: puzzle.zones, solution: puzzle.solution },
+            generatedAt: new Date().toISOString(),
+            metadata: puzzle.metadata
+          };
+          saveCache();
+          cleanOldPuzzles();
+          console.log(`✅ Pré-génération nocturne OK pour ${nextKey} (${Date.now() - startTime}ms)`);
+        } else {
+          console.error(`❌ Pré-génération nocturne FAILED pour ${nextKey}`);
+        }
+      } catch (err) {
+        console.error(`❌ Erreur pré-génération nocturne:`, err);
+      }
+    } else {
+      console.log(`ℹ️ Puzzle ${nextKey} déjà en cache, pré-génération inutile`);
+    }
+
+    // Planifier la prochaine nuit
+    scheduleMidnightPregenerate();
+  }, msUntilMidnight);
+}
+
+scheduleMidnightPregenerate();
