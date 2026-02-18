@@ -1,0 +1,199 @@
+{
+  "2026-02-17": {
+    "puzzle": {
+      "zones": [
+        [
+          1,
+          1,
+          2,
+          2,
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          1,
+          1,
+          1,
+          2,
+          2,
+          0,
+          0,
+          4
+        ],
+        [
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          2,
+          4
+        ],
+        [
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          2,
+          4
+        ],
+        [
+          3,
+          5,
+          5,
+          5,
+          5,
+          4,
+          4,
+          4
+        ],
+        [
+          7,
+          5,
+          5,
+          5,
+          4,
+          4,
+          6,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          5,
+          5,
+          6,
+          6,
+          6
+        ],
+        [
+          7,
+          7,
+          7,
+          7,
+          7,
+          6,
+          6,
+          6
+        ]
+      ],
+      "solution": [
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true
+        ],
+        [
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true
+        ],
+        [
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ]
+      ]
+    },
+    "generatedAt": "2026-02-17T14:11:56.404Z",
+    "metadata": {
+      "seed": "20260217",
+      "method": "hearts-first",
+      "difficulty": "easy",
+      "gridSize": 8,
+      "zoneCount": 8,
+      "totalCells": 64,
+      "generationTime": 295,
+      "validationTime": 2,
+      "totalAttempts": 124,
+      "rejectedNonUnique": 0,
+      "isUnique": true,
+      "heartCount": 16,
+      "zoneSizes": [
+        5,
+        5,
+        10,
+        9,
+        9,
+        9,
+        8,
+        9
+      ],
+      "minSmallZones": 2,
+      "smallZoneSize": 5,
+      "pairingStrategy": "proximity",
+      "configDescription": "Facile - Commence avec des petites zones faciles à résoudre"
+    }
+  }
+}

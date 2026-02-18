@@ -1,0 +1,264 @@
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { generateDailyPuzzle, generatePuzzleHeartsFirst } from './src/algorithms/puzzleGenerator.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Cache persistant sur disque
+const CACHE_FILE = path.join(__dirname, 'puzzle-cache.json');
+
+// Cache en mémoire : { "YYYY-MM-DD": { puzzle, generatedAt, metadata } }
+let puzzleCache = {};
+
+// Charger le cache depuis le disque au démarrage
+function loadCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = fs.readFileSync(CACHE_FILE, 'utf8');
+      puzzleCache = JSON.parse(data);
+      console.log(`✅ Cache chargé : ${Object.keys(puzzleCache).length} puzzles`);
+    } else {
+      console.log('ℹ️ Aucun cache existant, démarrage à vide');
+    }
+  } catch (err) {
+    console.error('❌ Erreur chargement cache:', err);
+    puzzleCache = {};
+  }
+}
+
+// Sauvegarder le cache sur disque
+function saveCache() {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(puzzleCache, null, 2));
+    console.log('💾 Cache sauvegardé sur disque');
+  } catch (err) {
+    console.error('❌ Erreur sauvegarde cache:', err);
+  }
+}
+
+// Nettoyer les vieux puzzles (garde seulement les 7 derniers jours)
+function cleanOldPuzzles() {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  let cleaned = 0;
+  for (const dateKey in puzzleCache) {
+    const puzzleDate = new Date(dateKey);
+    if (puzzleDate < sevenDaysAgo) {
+      delete puzzleCache[dateKey];
+      cleaned++;
+    }
+  }
+  
+  if (cleaned > 0) {
+    console.log(`🧹 Nettoyé ${cleaned} vieux puzzles`);
+    saveCache();
+  }
+}
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Servir les fichiers statiques (pour production)
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Obtenir la date du jour au format YYYY-MM-DD
+function getTodayKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// API : Obtenir le puzzle du jour
+app.get('/api/daily-puzzle', async (req, res) => {
+  const requestedDate = req.query.date; // YYYY-MM-DD optionnel
+  const todayKey = requestedDate || getTodayKey();
+  
+  console.log(`📥 Requête puzzle pour ${todayKey}`);
+  
+  // Vérifier le cache
+  if (puzzleCache[todayKey]) {
+    console.log(`✅ Puzzle trouvé en cache (${todayKey})`);
+    return res.json({
+      success: true,
+      date: todayKey,
+      puzzle: puzzleCache[todayKey].puzzle,
+      cached: true,
+      generatedAt: puzzleCache[todayKey].generatedAt
+    });
+  }
+  
+  // Générer un nouveau puzzle avec validation d'unicité
+  console.log(`⚙️ Génération puzzle unique pour ${todayKey}...`);
+  const startTime = Date.now();
+  
+  try {
+    // Générer avec la date spécifique comme seed
+    const seedFromDate = todayKey.replace(/-/g, '');
+    const puzzle = generatePuzzleHeartsFirst(seedFromDate, {
+      gridSize: 8,
+      minSmallZones: 3,
+      smallZoneSize: 4,
+      checkUniqueness: true,
+      maxTotalAttempts: 1000000
+    });
+    const generationTime = Date.now() - startTime;
+    
+    if (!puzzle) {
+      console.error(`❌ Échec génération pour ${todayKey}`);
+      return res.status(500).json({
+        success: false,
+        error: 'Échec génération puzzle unique'
+      });
+    }
+    
+    // Vérifier que le puzzle est bien unique
+    if (!puzzle.metadata?.isUnique) {
+      console.warn(`⚠️ Puzzle généré n'est pas unique pour ${todayKey}`);
+      return res.status(500).json({
+        success: false,
+        error: 'Puzzle généré n\'est pas unique'
+      });
+    }
+    
+    // Sauvegarder en cache
+    puzzleCache[todayKey] = {
+      puzzle: {
+        zones: puzzle.zones,
+        solution: puzzle.solution
+      },
+      generatedAt: new Date().toISOString(),
+      metadata: puzzle.metadata
+    };
+    
+    saveCache();
+    
+    console.log(`✅ Puzzle unique généré pour ${todayKey}`);
+    console.log(`   ├─ Temps: ${generationTime}ms`);
+    console.log(`   ├─ Tentatives: ${puzzle.metadata.totalAttempts}`);
+    console.log(`   ├─ Rejetés: ${puzzle.metadata.rejectedNonUnique}`);
+    console.log(`   └─ Validation: ${puzzle.metadata.validationTime}ms`);
+    
+    return res.json({
+      success: true,
+      date: todayKey,
+      puzzle: puzzleCache[todayKey].puzzle,
+      cached: false,
+      generatedAt: puzzleCache[todayKey].generatedAt,
+      generationTime,
+      metadata: puzzle.metadata
+    });
+    
+  } catch (err) {
+    console.error(`❌ Erreur génération puzzle:`, err);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// API : Obtenir les stats du cache
+app.get('/api/cache-stats', (req, res) => {
+  const dates = Object.keys(puzzleCache).sort();
+  
+  res.json({
+    success: true,
+    totalPuzzles: dates.length,
+    dates: dates,
+    cacheSize: JSON.stringify(puzzleCache).length,
+    oldestPuzzle: dates[0] || null,
+    newestPuzzle: dates[dates.length - 1] || null
+  });
+});
+
+// API : Pré-générer le puzzle de demain (pour cron job)
+app.post('/api/pregenerate-tomorrow', async (req, res) => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = tomorrow.toISOString().split('T')[0];
+  
+  console.log(`🔮 Pré-génération puzzle pour demain (${tomorrowKey})...`);
+  
+  // Vérifier si déjà existant
+  if (puzzleCache[tomorrowKey]) {
+    console.log(`✅ Puzzle de demain déjà en cache`);
+    return res.json({
+      success: true,
+      message: 'Puzzle déjà en cache',
+      date: tomorrowKey,
+      cached: true
+    });
+  }
+  
+  const startTime = Date.now();
+  
+  try {
+    const puzzle = generateDailyPuzzle(tomorrow);
+    const generationTime = Date.now() - startTime;
+    
+    if (!puzzle || !puzzle.metadata?.isUnique) {
+      throw new Error('Puzzle non-unique généré');
+    }
+    
+    puzzleCache[tomorrowKey] = {
+      puzzle: {
+        zones: puzzle.zones,
+        solution: puzzle.solution
+      },
+      generatedAt: new Date().toISOString(),
+      metadata: puzzle.metadata
+    };
+    
+    saveCache();
+    
+    console.log(`✅ Puzzle de demain pré-généré (${tomorrowKey})`);
+    console.log(`   └─ Temps: ${generationTime}ms`);
+    
+    return res.json({
+      success: true,
+      message: 'Puzzle pré-généré avec succès',
+      date: tomorrowKey,
+      generationTime,
+      metadata: puzzle.metadata
+    });
+    
+  } catch (err) {
+    console.error(`❌ Erreur pré-génération:`, err);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Servir le frontend pour toutes les autres routes (SPA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Démarrage du serveur
+loadCache(); // Charger le cache au démarrage
+cleanOldPuzzles(); // Nettoyer les vieux puzzles
+
+app.listen(PORT, () => {
+  console.log(`\n🚀 Serveur Hearts Puzzle démarré`);
+  console.log(`   ├─ Port: ${PORT}`);
+  console.log(`   ├─ Cache: ${Object.keys(puzzleCache).length} puzzles`);
+  console.log(`   └─ API: http://localhost:${PORT}/api/daily-puzzle\n`);
+});
+
+// Nettoyer le cache toutes les 24h
+setInterval(() => {
+  cleanOldPuzzles();
+}, 24 * 60 * 60 * 1000);
