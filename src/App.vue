@@ -72,7 +72,12 @@
       <!-- Section Comment jouer + Practice -->
       <section class="how-section">
         <div class="how-inner">
-          <h2 class="how-title">Comment jouer</h2>
+          <div class="how-title-row">
+            <h2 class="how-title">Comment jouer</h2>
+            <button class="btn-lesson" @click="isTutorialOpen = true">
+              📖 Leçon interactive
+            </button>
+          </div>
 
           <!-- Animations identiques à la popup -->
           <div class="how-rules-wrapper">
@@ -293,6 +298,9 @@
 
     <!-- Modal Comment jouer (pendant le jeu) -->
     <HowToPlayModal :is-open="isHowToPlayOpen" @close="closeHowToPlay" />
+
+    <!-- Tutoriel première visite -->
+    <TutorialModal :is-open="isTutorialOpen" @close="closeTutorial" />
   </div>
 </template>
 
@@ -301,6 +309,7 @@ import { ref, computed, watch, nextTick, onMounted } from "vue";
 import GameGrid from "./components/GameGrid.vue";
 import HowToPlayModal from "./components/HowToPlay/HowToPlayModal.vue";
 import HowToPlayRules from "./components/HowToPlay/HowToPlayRules.vue";
+import TutorialModal from "./components/TutorialModal.vue";
 import { useGame } from "./composables/useGame.js";
 import practicePuzzlesData from "../practice-puzzles.json";
 import puzzleCacheData from "../puzzle-cache.json";
@@ -310,6 +319,14 @@ const view = ref("landing"); // 'landing' | 'game'
 const isPracticeMode = ref(false);
 
 const isHowToPlayOpen = ref(false);
+
+// ===== Tutoriel (première visite) =====
+const isTutorialOpen = ref(false);
+
+function closeTutorial() {
+  localStorage.setItem("hearts-tutorial-seen", "true");
+  isTutorialOpen.value = false;
+}
 
 const {
   gameState,
@@ -496,6 +513,12 @@ function closeHowToPlay() {
 
 onMounted(() => {
   initPuzzle();
+  // Ouvrir le tutoriel si premier usage (aucun niveau complété et tutoriel jamais vu)
+  const tutorialSeen = !!localStorage.getItem("hearts-tutorial-seen");
+  const hasCompleted = completedLevels.value.length > 0;
+  if (!tutorialSeen && !hasCompleted) {
+    isTutorialOpen.value = true;
+  }
 });
 </script>
 
@@ -711,8 +734,37 @@ onMounted(() => {
   font-size: 1.3rem;
   font-weight: 800;
   color: var(--color-primary-dark);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0;
   text-align: center;
+}
+
+.how-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.btn-lesson {
+  background: linear-gradient(135deg, #fff0f2 0%, #ffe4e9 100%);
+  border: 1.5px solid #e05a6e55;
+  color: #b03050;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: "Nunito", sans-serif;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
+  white-space: nowrap;
+}
+.btn-lesson:hover {
+  background: linear-gradient(135deg, #ffe4e9 0%, #ffd0d8 100%);
+  box-shadow: 0 2px 8px rgba(176, 48, 80, 0.15);
 }
 
 .rules-grid {
