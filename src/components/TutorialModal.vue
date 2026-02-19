@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal-fade">
     <div v-if="isOpen" class="tuto-backdrop" @click.self="handleClose">
-      <div class="tuto-modal">
+      <div class="tuto-modal" :class="{ 'tuto-modal--wide': showIntro }">
         <!-- Header -->
         <div class="tuto-header">
           <span class="tuto-header-icon">📖</span>
@@ -11,153 +11,173 @@
           </button>
         </div>
 
-        <!-- Phase dots -->
-        <div class="tuto-progress">
-          <span
-            v-for="(ph, i) in PHASES"
-            :key="i"
-            class="tuto-dot"
-            :class="{
-              'tuto-dot--done': i < phaseIndex,
-              'tuto-dot--active': i === phaseIndex,
-            }"
-          />
-        </div>
+        <!-- ══ INTRO: How to play ══ -->
+        <template v-if="showIntro">
+          <div class="tuto-intro-body">
+            <HowToPlayRules />
+          </div>
+          <div class="tuto-footer">
+            <span class="tuto-step-count"
+              >Lisez les règles, puis commencez !</span
+            >
+            <button class="tuto-btn tuto-btn--start" @click="showIntro = false">
+              🎓 Commencer la leçon →
+            </button>
+          </div>
+        </template>
 
-        <!-- Victory screen -->
-        <div v-if="isVictory" class="tuto-victory">
-          <div class="tuto-victory-icon">🎉</div>
-          <h3>Puzzle résolu !</h3>
-          <p>
-            Vous avez maîtrisé toutes les techniques pour résoudre un niveau
-            Coeurzzle.
-          </p>
-          <button class="tuto-btn tuto-btn--start" @click="handleClose">
-            ❤️ Jouer maintenant !
-          </button>
-        </div>
-
-        <!-- Normal phase -->
         <template v-else>
-          <div class="tuto-body">
-            <!-- Instruction panel -->
-            <Transition name="step-fade" mode="out-in">
-              <div :key="phaseIndex" class="tuto-instruction">
-                <div class="tuto-phase-tag" :class="`tag--${phase.tag}`">
-                  {{ phase.tag === "info" ? "💡 Observation" : "👆 À vous !" }}
-                </div>
-                <h3 class="tuto-inst-title">{{ phase.title }}</h3>
-                <p class="tuto-inst-text">{{ phase.text }}</p>
-                <div
-                  v-if="phase.tag === 'action' && pendingCount > 0"
-                  class="tuto-pending-hint"
-                >
-                  {{ pendingCount }} case{{ pendingCount > 1 ? "s" : "" }} à
-                  cliquer ↓
-                </div>
-              </div>
-            </Transition>
+          <!-- Phase dots -->
+          <div class="tuto-progress">
+            <span
+              v-for="(ph, i) in PHASES"
+              :key="i"
+              class="tuto-dot"
+              :class="{
+                'tuto-dot--done': i < phaseIndex,
+                'tuto-dot--active': i === phaseIndex,
+              }"
+            />
+          </div>
 
-            <!-- Grid -->
-            <div class="tuto-grid-area">
-              <div class="tuto-grid-wrapper">
-                <!-- Real SVG zone borders -->
-                <ZoneOverlay :zones="ZONES" :grid-size="GRID" />
-                <!-- Cells -->
-                <div class="tuto-grid" :style="gridStyle">
+          <!-- Victory screen -->
+          <div v-if="isVictory" class="tuto-victory">
+            <div class="tuto-victory-icon">🎉</div>
+            <h3>Puzzle résolu !</h3>
+            <p>
+              Vous avez maîtrisé toutes les techniques pour résoudre un niveau
+              Coeurzzle.
+            </p>
+            <button class="tuto-btn tuto-btn--start" @click="handleClose">
+              ❤️ Jouer maintenant !
+            </button>
+          </div>
+
+          <!-- Normal phase -->
+          <template v-else>
+            <div class="tuto-body">
+              <!-- Instruction panel -->
+              <Transition name="step-fade" mode="out-in">
+                <div :key="phaseIndex" class="tuto-instruction">
+                  <div class="tuto-phase-tag" :class="`tag--${phase.tag}`">
+                    {{
+                      phase.tag === "info" ? "💡 Observation" : "👆 À vous !"
+                    }}
+                  </div>
+                  <h3 class="tuto-inst-title">{{ phase.title }}</h3>
+                  <p class="tuto-inst-text">{{ phase.text }}</p>
                   <div
-                    v-for="cell in allCells"
-                    :key="`tc-${cell.r}-${cell.c}`"
-                    class="tuto-cell"
-                    :class="[
-                      `tzo-${ZONES[cell.r][cell.c]}`,
-                      {
-                        'cell--pending-h': isPendingHeart(cell.r, cell.c),
-                        'cell--pending-x': isPendingCross(cell.r, cell.c),
-                        'cell--intermediate-heart': isIntermediateHeart(
-                          cell.r,
-                          cell.c,
-                        ),
-                        'cell--focus-context': isContextFocus(cell.r, cell.c),
-                        'cell--focus-heart': isFocusHeart(cell.r, cell.c),
-                        'cell--wrong': isWrong(cell.r, cell.c),
-                      },
-                    ]"
-                    @click="handleCellClick(cell.r, cell.c)"
+                    v-if="phase.tag === 'action' && pendingCount > 0"
+                    class="tuto-pending-hint"
                   >
-                    <!-- Heart -->
-                    <svg
-                      v-if="tutState[cell.r][cell.c] === 2"
-                      class="tuto-icon"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
+                    {{ pendingCount }} case{{ pendingCount > 1 ? "s" : "" }} à
+                    cliquer ↓
+                  </div>
+                </div>
+              </Transition>
+
+              <!-- Grid -->
+              <div class="tuto-grid-area">
+                <div class="tuto-grid-wrapper">
+                  <!-- Real SVG zone borders -->
+                  <ZoneOverlay :zones="ZONES" :grid-size="GRID" />
+                  <!-- Cells -->
+                  <div class="tuto-grid" :style="gridStyle">
+                    <div
+                      v-for="cell in allCells"
+                      :key="`tc-${cell.r}-${cell.c}`"
+                      class="tuto-cell"
+                      :class="[
+                        `tzo-${ZONES[cell.r][cell.c]}`,
+                        {
+                          'cell--pending-h': isPendingHeart(cell.r, cell.c),
+                          'cell--pending-x': isPendingCross(cell.r, cell.c),
+                          'cell--intermediate-heart': isIntermediateHeart(
+                            cell.r,
+                            cell.c,
+                          ),
+                          'cell--focus-context': isContextFocus(cell.r, cell.c),
+                          'cell--focus-heart': isFocusHeart(cell.r, cell.c),
+                          'cell--wrong': isWrong(cell.r, cell.c),
+                        },
+                      ]"
+                      @click="handleCellClick(cell.r, cell.c)"
                     >
-                      <defs>
-                        <linearGradient
-                          id="tut-hg"
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-                          <stop
-                            offset="0%"
-                            style="stop-color: #ff5252; stop-opacity: 1"
-                          />
-                          <stop
-                            offset="100%"
-                            style="stop-color: #d50000; stop-opacity: 1"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        fill="url(#tut-hg)"
-                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                      />
-                    </svg>
-                    <!-- X -->
-                    <svg
-                      v-else-if="tutState[cell.r][cell.c] === 1"
-                      class="tuto-icon tuto-icon-x"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
+                      <!-- Heart -->
+                      <svg
+                        v-if="tutState[cell.r][cell.c] === 2"
+                        class="tuto-icon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                      >
+                        <defs>
+                          <linearGradient
+                            id="tut-hg"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <stop
+                              offset="0%"
+                              style="stop-color: #ff5252; stop-opacity: 1"
+                            />
+                            <stop
+                              offset="100%"
+                              style="stop-color: #d50000; stop-opacity: 1"
+                            />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          fill="url(#tut-hg)"
+                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                        />
+                      </svg>
+                      <!-- X -->
+                      <svg
+                        v-else-if="tutState[cell.r][cell.c] === 1"
+                        class="tuto-icon tuto-icon-x"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Footer -->
-          <div class="tuto-footer">
-            <span class="tuto-step-count"
-              >Étape {{ phaseIndex + 1 }} / {{ PHASES.length }}</span
-            >
-            <div class="tuto-footer-actions">
-              <button
-                v-if="phase.tag === 'info'"
-                class="tuto-btn tuto-btn--primary"
-                @click="advancePhase"
+            <!-- Footer -->
+            <div class="tuto-footer">
+              <span class="tuto-step-count"
+                >Étape {{ phaseIndex + 1 }} / {{ PHASES.length }}</span
               >
-                Compris →
-              </button>
-              <button
-                v-else
-                class="tuto-btn tuto-btn--ghost"
-                @click="skipPhase"
-              >
-                Passer cette étape
-              </button>
+              <div class="tuto-footer-actions">
+                <button
+                  v-if="phase.tag === 'info'"
+                  class="tuto-btn tuto-btn--primary"
+                  @click="advancePhase"
+                >
+                  Compris →
+                </button>
+                <button
+                  v-else
+                  class="tuto-btn tuto-btn--ghost"
+                  @click="skipPhase"
+                >
+                  Passer cette étape
+                </button>
+              </div>
             </div>
-          </div>
+          </template>
         </template>
+        <!-- end v-else (lesson) -->
       </div>
     </div>
   </Transition>
@@ -167,6 +187,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import ZoneOverlay from "./ZoneOverlay.vue";
+import HowToPlayRules from "./HowToPlay/HowToPlayRules.vue";
 
 const props = defineProps({ isOpen: Boolean });
 const emit = defineEmits(["close"]);
@@ -451,6 +472,7 @@ const PHASES = [
 const phaseIndex = ref(0);
 const tutState = ref(emptyGrid());
 const pendingSet = ref(new Set()); // "r,c" keys
+const showIntro = ref(true); // show rules screen before the lesson
 const wrongCells = ref(new Set()); // brief red flash
 const intermediateHearts = ref(new Set()); // cells clicked once (showing X), waiting 2nd click for ❤️
 const isVictory = ref(false);
@@ -620,9 +642,11 @@ watch(
   () => props.isOpen,
   (open) => {
     if (open) {
+      showIntro.value = true;
       tutState.value = emptyGrid();
       isVictory.value = false;
       wrongCells.value = new Set();
+      intermediateHearts.value = new Set();
       loadPhase(0);
     }
   },
@@ -656,6 +680,10 @@ function handleClose() {
   display: flex;
   flex-direction: column;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  transition: max-width 0.3s ease;
+}
+.tuto-modal--wide {
+  max-width: 620px;
 }
 
 /* Header */
@@ -960,6 +988,13 @@ function handleClose() {
   color: #bbb;
   opacity: 0.65;
   stroke-width: 2.5px;
+}
+
+/* Intro screen (rules) */
+.tuto-intro-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem 0.25rem;
 }
 
 /* Footer */
