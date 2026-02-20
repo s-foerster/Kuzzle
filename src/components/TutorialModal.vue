@@ -670,6 +670,12 @@ function handleClose() {
   justify-content: center;
   padding: 0.75rem;
 }
+@media (max-width: 480px) {
+  .tuto-backdrop {
+    padding: 0.25rem;
+    align-items: flex-end;
+  }
+}
 .tuto-modal {
   background: #fff;
   border-radius: 18px;
@@ -684,6 +690,12 @@ function handleClose() {
 }
 .tuto-modal--wide {
   max-width: 620px;
+}
+@media (max-width: 480px) {
+  .tuto-modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 98dvh;
+  }
 }
 
 /* Header */
@@ -760,6 +772,13 @@ function handleClose() {
   gap: 0.6rem;
   min-height: 0;
 }
+@media (max-width: 480px) {
+  .tuto-body {
+    padding: 0.35rem 0.35rem 0.3rem;
+    flex-direction: column-reverse; /* grid on top, instruction below */
+    gap: 0.35rem;
+  }
+}
 
 /* Instruction */
 .tuto-instruction {
@@ -767,6 +786,22 @@ function handleClose() {
   border-radius: 10px;
   padding: 0.6rem 0.8rem;
   flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .tuto-instruction {
+    padding: 0.4rem 0.6rem;
+  }
+  .tuto-inst-title {
+    font-size: 0.78rem;
+  }
+  .tuto-inst-text {
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+  .tuto-phase-tag {
+    font-size: 0.62rem;
+    margin-bottom: 0.2rem;
+  }
 }
 .tuto-phase-tag {
   display: inline-block;
@@ -837,6 +872,14 @@ function handleClose() {
   position: relative;
   width: min(288px, 80vw);
   height: min(288px, 80vw);
+}
+@media (max-width: 480px) {
+  .tuto-grid-wrapper {
+    width: calc(100vw - 1.5rem);
+    height: calc(100vw - 1.5rem);
+    max-width: 380px;
+    max-height: 380px;
+  }
 }
 
 .tuto-grid {
@@ -1006,6 +1049,11 @@ function handleClose() {
   border-top: 1px solid #eee;
   flex-shrink: 0;
 }
+@media (max-width: 480px) {
+  .tuto-footer {
+    padding: 0.35rem 0.5rem;
+  }
+}
 .tuto-step-count {
   font-size: 0.72rem;
   color: #bbb;
@@ -1094,8 +1142,8 @@ function handleClose() {
   opacity: 0;
 }
 
-/* Responsive */
-@media (max-height: 680px) {
+/* Responsive: short screens (landscape) */
+@media (max-height: 680px) and (min-width: 481px) {
   .tuto-grid-wrapper {
     width: min(220px, 65vw);
     height: min(220px, 65vw);

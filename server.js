@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateDailyPuzzle, generatePuzzleHeartsFirst } from './src/algorithms/puzzleGenerator.js';
+import { generateDailyLumizle } from './src/algorithms/lumizle/puzzleFactory.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,8 +15,14 @@ const PORT = process.env.PORT || 3000;
 // Cache persistant sur disque
 const CACHE_FILE = path.join(__dirname, 'puzzle-cache.json');
 
+// Cache Lumizle persistant sur disque
+const LUMIZLE_CACHE_FILE = path.join(__dirname, 'lumizle-cache.json');
+
 // Cache en mémoire : { "YYYY-MM-DD": { puzzle, generatedAt, metadata } }
 let puzzleCache = {};
+
+// Cache Lumizle en mémoire
+let lumizleCache = {};
 
 // Charger le cache depuis le disque au démarrage
 function loadCache() {
@@ -33,6 +40,22 @@ function loadCache() {
   }
 }
 
+// Charger le cache Lumizle depuis le disque
+function loadLumizleCache() {
+  try {
+    if (fs.existsSync(LUMIZLE_CACHE_FILE)) {
+      const data = fs.readFileSync(LUMIZLE_CACHE_FILE, 'utf8');
+      lumizleCache = JSON.parse(data);
+      console.log(`✅ Cache Lumizle chargé : ${Object.keys(lumizleCache).length} puzzles`);
+    } else {
+      console.log('ℹ️ Aucun cache Lumizle existant, démarrage à vide');
+    }
+  } catch (err) {
+    console.error('❌ Erreur chargement cache Lumizle:', err);
+    lumizleCache = {};
+  }
+}
+
 // Sauvegarder le cache sur disque
 function saveCache() {
   try {
@@ -43,10 +66,20 @@ function saveCache() {
   }
 }
 
+// Sauvegarder le cache Lumizle sur disque
+function saveLumizleCache() {
+  try {
+    fs.writeFileSync(LUMIZLE_CACHE_FILE, JSON.stringify(lumizleCache, null, 2));
+    console.log('💾 Cache Lumizle sauvegardé sur disque');
+  } catch (err) {
+    console.error('❌ Erreur sauvegarde cache Lumizle:', err);
+  }
+}
+
 // Configurations disponibles pour la génération des puzzles
 const PUZZLE_CONFIGS = [
   { gridSize: 10, minSmallZones: 5, smallZoneSize: 4 },
-  { gridSize: 9,  minSmallZones: 4, smallZoneSize: 3 },
+  { gridSize: 9,  minSmallZones: 4, smallZoneSize: 4 },
   { gridSize: 9,  minSmallZones: 5, smallZoneSize: 4 },
   { gridSize: 10, minSmallZones: 4, smallZoneSize: 5 },
   { gridSize: 10, minSmallZones: 4, smallZoneSize: 4 },
@@ -66,22 +99,22 @@ function pickConfigForDate(dateKey) {
   return PUZZLE_CONFIGS[idx];
 }
 
-// Nettoyer les vieux puzzles (garde seulement les 7 derniers jours)
+// Nettoyer les vieux puzzles (garde seulement les 30 derniers jours)
 function cleanOldPuzzles() {
   const now = new Date();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   
   let cleaned = 0;
   for (const dateKey in puzzleCache) {
     const puzzleDate = new Date(dateKey);
-    if (puzzleDate < sevenDaysAgo) {
+    if (puzzleDate < thirtyDaysAgo) {
       delete puzzleCache[dateKey];
       cleaned++;
     }
   }
   
   if (cleaned > 0) {
-    console.log(`🧹 Nettoyé ${cleaned} vieux puzzles`);
+    console.log(`🧹 Nettoyé ${cleaned} vieux puzzles (> 30j)`);
     saveCache();
   }
 }
@@ -205,6 +238,74 @@ app.get('/api/daily-puzzle', async (req, res) => {
   }
 });
 
+// API : Puzzle Lumizle quotidien
+app.get('/api/lumizle-daily', async (req, res) => {
+  const requestedDate = req.query.date; // YYYY-MM-DD optionnel
+  const todayKey = requestedDate || getTodayKey();
+
+  console.log(`📥 Requête Lumizle pour ${todayKey}`);
+
+  // Vérifier le cache
+  if (lumizleCache[todayKey]) {
+    console.log(`✅ Puzzle Lumizle trouvé en cache (${todayKey})`);
+    return res.json({
+      success: true,
+      date: todayKey,
+      puzzle: lumizleCache[todayKey].puzzle,
+      cached: true,
+      generatedAt: lumizleCache[todayKey].generatedAt
+    });
+  }
+
+  // Générer un nouveau puzzle
+  console.log(`⚙️ Génération puzzle Lumizle pour ${todayKey}...`);
+  const startTime = Date.now();
+
+  try {
+    const puzzle = generateDailyLumizle(todayKey);
+    const generationTime = Date.now() - startTime;
+
+    if (!puzzle) {
+      console.error(`❌ Échec génération Lumizle pour ${todayKey}`);
+      return res.status(500).json({
+        success: false,
+        error: 'Échec génération puzzle Lumizle'
+      });
+    }
+
+    // Sauvegarder en cache
+    lumizleCache[todayKey] = {
+      puzzle: {
+        initialGrid: puzzle.initialGrid,
+        solution:    puzzle.solution,
+        rules:       puzzle.rules,
+        metadata:    puzzle.metadata,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+
+    saveLumizleCache();
+
+    console.log(`✅ Puzzle Lumizle généré pour ${todayKey} (${generationTime}ms)`);
+
+    return res.json({
+      success: true,
+      date: todayKey,
+      puzzle: lumizleCache[todayKey].puzzle,
+      cached: false,
+      generatedAt: lumizleCache[todayKey].generatedAt,
+      generationTime,
+    });
+
+  } catch (err) {
+    console.error(`❌ Erreur génération Lumizle:`, err);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 // API : Obtenir les stats du cache
 app.get('/api/cache-stats', (req, res) => {
   const dates = Object.keys(puzzleCache).sort();
@@ -297,13 +398,16 @@ app.get('*', (req, res) => {
 
 // Démarrage du serveur
 loadCache(); // Charger le cache au démarrage
+loadLumizleCache(); // Charger le cache Lumizle
 cleanOldPuzzles(); // Nettoyer les vieux puzzles
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Serveur Hearts Puzzle démarré`);
   console.log(`   ├─ Port: ${PORT}`);
-  console.log(`   ├─ Cache: ${Object.keys(puzzleCache).length} puzzles`);
-  console.log(`   └─ API: http://localhost:${PORT}/api/daily-puzzle\n`);
+  console.log(`   ├─ Cache Hearts: ${Object.keys(puzzleCache).length} puzzles`);
+  console.log(`   ├─ Cache Lumizle: ${Object.keys(lumizleCache).length} puzzles`);
+  console.log(`   ├─ API: http://localhost:${PORT}/api/daily-puzzle`);
+  console.log(`   └─ API: http://localhost:${PORT}/api/lumizle-daily\n`);
 });
 
 // Nettoyer le cache toutes les 24h
