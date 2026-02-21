@@ -16,7 +16,11 @@
 
         <!-- Marque -->
         <RouterLink to="/" class="header-brand">
-          <img src="./assets/kuzzle_logo.png" alt="Kuzzle" class="header-logo" />
+          <img
+            src="./assets/kuzzle_logo.png"
+            alt="Kuzzle"
+            class="header-logo"
+          />
           <h1 class="brand-title">Kuzzle</h1>
         </RouterLink>
 
@@ -35,36 +39,33 @@
     </RouterView>
 
     <!-- ===== MODALES GLOBALES ===== -->
-    <TutorialModal
-      :isOpen="isTutorialOpen"
-      @close="isTutorialOpen = false"
-    />
+    <TutorialModal :isOpen="isTutorialOpen" @close="isTutorialOpen = false" />
     <AuthModal />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter, RouterLink, RouterView } from 'vue-router'
-import { useAuthStore } from './stores/auth.js'
-import UserAvatar from './components/UserAvatar.vue'
-import TutorialModal from './components/TutorialModal.vue'
-import AuthModal from './components/Auth/AuthModal.vue'
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter, RouterLink, RouterView } from "vue-router";
+import { useAuthStore } from "./stores/auth.js";
+import UserAvatar from "./components/UserAvatar.vue";
+import TutorialModal from "./components/TutorialModal.vue";
+import AuthModal from "./components/Auth/AuthModal.vue";
 
-const route         = useRoute()
-const router        = useRouter()
-const authStore     = useAuthStore()
-const isTutorialOpen = ref(false)
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const isTutorialOpen = ref(false);
 
 // Afficher le bouton "retour" uniquement sur les pages de jeu
 const showBackButton = computed(() =>
-  ['/game', '/lumizle'].includes(route.path)
-)
+  ["/game", "/lumizle"].includes(route.path),
+);
 
 onMounted(async () => {
   // Initialise la session Supabase (silencieux si Supabase non configuré)
-  await authStore.init()
-})
+  await authStore.init();
+});
 </script>
 
 <style scoped>
@@ -144,12 +145,20 @@ onMounted(async () => {
 
 /* ===== TRANSITION ENTRE PAGES ===== */
 .page-fade-enter-active,
-.page-fade-leave-active { transition: opacity 0.18s ease; }
+.page-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
 .page-fade-enter-from,
-.page-fade-leave-to     { opacity: 0; }
+.page-fade-leave-to {
+  opacity: 0;
+}
 
 @media (max-width: 380px) {
-  .header-logo  { height: 1.6rem; }
-  .brand-title  { font-size: 1.25rem; }
+  .header-logo {
+    height: 1.6rem;
+  }
+  .brand-title {
+    font-size: 1.25rem;
+  }
 }
 </style>
