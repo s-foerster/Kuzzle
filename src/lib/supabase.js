@@ -11,7 +11,13 @@ export const supabase = supabaseUrl && supabaseAnonKey
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        // false : on gère l'échange du code OAuth manuellement dans
+        // AuthCallbackView.vue via exchangeCodeForSession().
+        // Laisser detectSessionInUrl à true ferait tenter l'échange deux
+        // fois (une par le SDK au démarrage, une par AuthCallbackView),
+        // la seconde trouvant le verifier PKCE déjà consommé → erreur 401.
+        detectSessionInUrl: false,
+        flowType: 'pkce',
       },
     })
   : null

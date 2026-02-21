@@ -3,6 +3,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 import { generateDailyPuzzle, generatePuzzleHeartsFirst } from './src/algorithms/puzzleGenerator.js';
 import { generateDailyLumizle } from './src/algorithms/lumizle/puzzleFactory.js';
 
@@ -386,6 +387,47 @@ app.post('/api/pregenerate-tomorrow', async (req, res) => {
       error: err.message
     });
   }
+});
+
+// API : Supprimer le compte utilisateur
+app.delete('/api/account', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Token manquant' });
+  }
+
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+    return res.status(503).json({ success: false, error: 'Supabase non configuré côté serveur' });
+  }
+
+  // Vérifier le JWT avec le client anon
+  const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: { user }, error: userError } = await anonClient.auth.getUser(token);
+
+  if (userError || !user) {
+    return res.status(401).json({ success: false, error: 'Token invalide ou expiré' });
+  }
+
+  // Supprimer le compte avec le client service role
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
+
+  if (deleteError) {
+    console.error('❌ Erreur suppression compte:', deleteError);
+    return res.status(500).json({ success: false, error: 'Échec de la suppression du compte' });
+  }
+
+  console.log(`✅ Compte supprimé : ${user.id}`);
+  return res.json({ success: true });
 });
 
 // Servir le frontend pour toutes les autres routes (SPA)
