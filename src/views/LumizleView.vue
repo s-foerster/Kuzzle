@@ -148,16 +148,22 @@ watch(lumizleIsWon, async (won) => {
     try {
       const { supabase } = await import('../lib/supabase.js')
       if (supabase) {
-        await supabase.from('game_results').upsert({
+        const { error: saveError } = await supabase.from('game_results').upsert({
           user_id:      authStore.user.id,
           game_type:    'lumizle',
           puzzle_date:  id,
           completed:    true,
           time_seconds: lumizleElapsedSeconds.value,
         }, { onConflict: 'user_id,game_type,puzzle_date' })
+        
+        if (saveError) {
+          console.error('❌ [LumizleView] Erreur sauvegarde Supabase:', saveError.message || saveError)
+        } else {
+          console.log('✅ [LumizleView] Résultat sauvegardé dans Supabase')
+        }
       }
     } catch (e) {
-      console.warn('[LumizleView] Supabase save error:', e)
+      console.error('❌ [LumizleView] Supabase save exception:', e)
     }
   }
 })

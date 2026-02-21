@@ -30,54 +30,56 @@ function fail(msg) {
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
-
-  // ── Erreur renvoyée par Google / Supabase (accès refusé, etc.) ──────────
   const oauthError = params.get('error')
   const oauthDesc  = params.get('error_description')
   if (oauthError) {
-    fail(oauthDesc
-      ? decodeURIComponent(oauthDesc.replace(/\+/g, ' '))
-      : 'La connexion a été annulée.')
+    fail(oauthDesc ? decodeURIComponent(oauthDesc.replace(/\+/g, ' ')) : 'La connexion a été annulée.')
     return
   }
-
-  if (!supabase) {
-    router.replace('/')
-    return
-  }
-
+  if (!supabase) { router.replace('/'); return }
   const code = params.get('code')
+  if (!code) { router.replace('/'); return }
 
-  if (!code) {
-    // Pas de code dans l'URL → probablement un accès direct à /auth/callback
-    router.replace('/')
-    return
-  }
+  try {
+    // Attendre la fin de l'initialisation interne du SDK Supabase.
+    // Le SDK acquiert un verrou (Web Locks API) au démarrage pour
+    // récupérer/rafraîchir la session existante. exchangeCodeForSession()
+    // a besoin du même verrou : sans cette attente, les deux opérations
+    // se disputent le verrou et l'échange expire après 10 s.
+    await supabase.auth.initialize()
 
-  // ── Échange PKCE : code d'autorisation → session ────────────────────────
-  // detectSessionInUrl est à false dans supabase.js pour éviter que le SDK
-  // tente cet échange automatiquement (et consomme le verifier avant nous).
-  const { error: exchError } = await supabase.auth.exchangeCodeForSession(code)
+    // Timeout de 30 s (le verrou interne du SDK expire lui-même à 10 s,
+    // il nous faut donc largement plus que 10 s pour couvrir init + échange).
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Le serveur met trop de temps à répondre.')), 30000)
+    )
 
-  if (exchError) {
-    console.error('[auth/callback]', exchError.message)
+    const { error: exchError } = await Promise.race([
+      supabase.auth.exchangeCodeForSession(code),
+      timeout,
+    ])
 
-    // Messages en français selon le type d'erreur
-    if (exchError.message.includes('code verifier')) {
-      fail('Session expirée ou déjà utilisée. Relancez la connexion.')
-    } else if (exchError.message.includes('redirect')) {
-      fail('URL de redirection non autorisée. Vérifiez la configuration Supabase.')
-    } else {
-      fail('Erreur de connexion. Veuillez réessayer.')
+    if (exchError) {
+      if (exchError.message?.includes('code verifier') || exchError.message?.includes('verifier'))
+        fail('Session expirée ou déjà utilisée. Relancez la connexion.')
+      else if (exchError.message?.includes('redirect'))
+        fail('URL de redirection non autorisée. Vérifiez la configuration Supabase.')
+      else if (exchError.isAcquireTimeout)
+        fail('Le client Supabase est occupé. Réessayez dans un instant.')
+      else
+        fail('Erreur de connexion : ' + exchError.message)
+      return
     }
-    return
-  }
 
-  // L'échange a réussi. onAuthStateChange dans auth.js a déjà mis à jour
-  // le store (user, initialized) de façon synchrone avant tout await.
-  // Pas besoin d'appeler init() ici — cela causerait un double getSession()
-  // pendant que le SDK finalise encore l'échange PKCE, ce qui peut bloquer.
-  router.replace('/')
+    // Succès → retour à l'accueil
+    router.replace('/')
+  } catch (err) {
+    console.error('[AuthCallback] Exception catchée:', err)
+    if (err.isAcquireTimeout)
+      fail('Le client Supabase est occupé. Réessayez dans un instant.')
+    else
+      fail(err.message || 'Erreur inattendue.')
+  }
 })
 </script>
 

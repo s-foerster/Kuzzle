@@ -66,14 +66,16 @@ export const useAuthStore = defineStore('auth', () => {
       initialized.value = true
 
       // Opérations async (DB) après avoir marqué initialized
+      // IMPORTANT: Ne pas faire de `await` ici pour les appels DB.
+      // Le SDK Supabase maintient un verrou (Web Lock) pendant onAuthStateChange.
+      // Si on await une requête Supabase ici, elle tentera d'acquérir le même verrou
+      // pour récupérer le token JWT → deadlock de 10s puis timeout.
       if (session?.user) {
-        // Charger / recharger le profil si l'utilisateur a changé
-        if (!profile.value || profile.value.id !== session.user.id) {
-          await fetchProfile(session.user.id)
-        }
-
-        // Créer le profil à la première connexion Google/OAuth
-        if (event === 'SIGNED_IN' && !profile.value) {
+        if (event === 'SIGNED_IN') {
+          // À la connexion : on récupère le profil d'abord, et SEULEMENT si absent
+          // on le crée. Enchaîner dans le .then() évite la race condition où
+          // profile.value est encore null au moment du check (fetchProfile étant async).
+          const userId     = session.user.id
           const googleName   = session.user.user_metadata?.full_name
           const googleAvatar = session.user.user_metadata?.avatar_url
           const defaultUsername = (googleName || session.user.email?.split('@')[0] || 'joueur')
@@ -81,8 +83,18 @@ export const useAuthStore = defineStore('auth', () => {
             .replace(/\s+/g, '_')
             .replace(/[^a-z0-9_]/g, '')
             .slice(0, 20)
-          await createProfile(session.user.id, defaultUsername, googleAvatar)
-          await fetchProfile(session.user.id)
+
+          fetchProfile(userId).then(() => {
+            if (!profile.value) {
+              // Profil inexistant → première connexion Google/OAuth
+              createProfile(userId, defaultUsername, googleAvatar)
+                .then(() => fetchProfile(userId))
+                .catch(console.error)
+            }
+          }).catch(console.error)
+        } else if (!profile.value || profile.value.id !== session.user.id) {
+          // Autres événements (TOKEN_REFRESHED, etc.) : simple rechargement
+          fetchProfile(session.user.id).catch(console.error)
         }
       }
     })
@@ -138,11 +150,12 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       // Vérifier l'unicité du username avant de créer le compte
+      // maybeSingle() : null si 0 lignes (pseudo disponible), sans erreur PGRST116
       const { data: existing } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', usernameVal)
-        .single()
+        .maybeSingle()
       if (existing) {
         error.value = 'Ce nom d\'utilisateur est déjà pris.'
         return { error: error.value }
@@ -191,7 +204,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value    = null
     profile.value = null
     // Invalider la session côté serveur en arrière-plan (ignorer les erreurs réseau)
-    if (supabase) supabase.auth.signOut().catch(() => {})
+    // scope: 'local' garantit que si le réseau échoue (CORS, offline, base en pause),
+    // la session locale sera *tout de même* purgée et l'utilisateur ne sera plus
+    // considéré connecté au prochain rechargement.
+    if (supabase) supabase.auth.signOut({ scope: 'local' }).catch(() => {})
   }
 
   async function updateUsername(newUsername) {

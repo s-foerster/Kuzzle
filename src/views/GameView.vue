@@ -482,7 +482,7 @@ watch(isWon, async (won) => {
     try {
       const { supabase } = await import("../lib/supabase.js");
       if (supabase) {
-        await supabase.from("game_results").upsert(
+        const { error: saveError } = await supabase.from("game_results").upsert(
           {
             user_id: authStore.user.id,
             game_type: "hearts",
@@ -493,9 +493,14 @@ watch(isWon, async (won) => {
           },
           { onConflict: "user_id,game_type,puzzle_date" },
         );
+        if (saveError) {
+          console.error("❌ [GameView] Erreur sauvegarde Supabase:", saveError.message || saveError);
+        } else {
+          console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
+        }
       }
     } catch (e) {
-      console.warn("[GameView] Supabase save error:", e);
+      console.error("❌ [GameView] Supabase save exception:", e);
     }
   }
 });
