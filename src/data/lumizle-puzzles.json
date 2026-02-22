@@ -90,12 +90,12 @@
         "darkCount": 10,
         "totalCells": 25,
         "solutionTime": 3,
-        "minimizationTime": 3,
-        "generationTime": 6,
+        "minimizationTime": 4,
+        "generationTime": 7,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.217Z"
+    "generatedAt": "2026-02-22T07:34:34.482Z"
   },
   "easy_2": {
     "id": "easy_2",
@@ -187,13 +187,13 @@
         "lightCount": 15,
         "darkCount": 10,
         "totalCells": 25,
-        "solutionTime": 1,
+        "solutionTime": 2,
         "minimizationTime": 4,
-        "generationTime": 5,
+        "generationTime": 6,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.223Z"
+    "generatedAt": "2026-02-22T07:34:34.491Z"
   },
   "easy_3": {
     "id": "easy_3",
@@ -291,7 +291,7 @@
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.226Z"
+    "generatedAt": "2026-02-22T07:34:34.493Z"
   },
   "medium_1": {
     "id": "medium_1",
@@ -440,12 +440,12 @@
         "darkCount": 18,
         "totalCells": 49,
         "solutionTime": 2,
-        "minimizationTime": 11,
-        "generationTime": 13,
+        "minimizationTime": 10,
+        "generationTime": 12,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.241Z"
+    "generatedAt": "2026-02-22T07:34:34.506Z"
   },
   "medium_2": {
     "id": "medium_2",
@@ -594,12 +594,12 @@
         "darkCount": 20,
         "totalCells": 49,
         "solutionTime": 1,
-        "minimizationTime": 9,
-        "generationTime": 10,
+        "minimizationTime": 8,
+        "generationTime": 9,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.252Z"
+    "generatedAt": "2026-02-22T07:34:34.516Z"
   },
   "medium_3": {
     "id": "medium_3",
@@ -753,7 +753,7 @@
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.261Z"
+    "generatedAt": "2026-02-22T07:34:34.524Z"
   },
   "hard_1": {
     "id": "hard_1",
@@ -935,13 +935,13 @@
         "lightCount": 40,
         "darkCount": 24,
         "totalCells": 64,
-        "solutionTime": 1,
-        "minimizationTime": 16,
-        "generationTime": 17,
+        "solutionTime": 2,
+        "minimizationTime": 20,
+        "generationTime": 22,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.279Z"
+    "generatedAt": "2026-02-22T07:34:34.547Z"
   },
   "hard_2": {
     "id": "hard_2",
@@ -1124,12 +1124,12 @@
         "darkCount": 24,
         "totalCells": 64,
         "solutionTime": 1,
-        "minimizationTime": 16,
-        "generationTime": 17,
+        "minimizationTime": 20,
+        "generationTime": 21,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.297Z"
+    "generatedAt": "2026-02-22T07:34:34.568Z"
   },
   "hard_3": {
     "id": "hard_3",
@@ -1312,11 +1312,11 @@
         "darkCount": 26,
         "totalCells": 64,
         "solutionTime": 1,
-        "minimizationTime": 16,
-        "generationTime": 17,
+        "minimizationTime": 18,
+        "generationTime": 19,
         "isUnique": true
       }
     },
-    "generatedAt": "2026-02-20T10:37:31.315Z"
+    "generatedAt": "2026-02-22T07:34:34.589Z"
   }
 }

@@ -281,6 +281,7 @@ export function useGame() {
     isWon.value = true;
     if (wasNotWon) {
       stopTimer();
+      saveLevelStats(getCurrentLevelId(), elapsedTime.value, verifyCount.value);
       saveGameState();
     }
   }
@@ -401,6 +402,39 @@ export function useGame() {
     saveGameState();
   }, { deep: true });
 
+  // ── Statistiques par niveau (persistées séparément) ──────────────────────────
+  function getCurrentLevelId() {
+    if (!currentDate.value) return null;
+    if (currentDate.value.startsWith('practice_')) {
+      return currentDate.value.replace('practice_', '');
+    }
+    if (/^\d{8}$/.test(currentDate.value)) {
+      return `${currentDate.value.slice(0, 4)}-${currentDate.value.slice(4, 6)}-${currentDate.value.slice(6, 8)}`;
+    }
+    return currentDate.value;
+  }
+
+  function saveLevelStats(levelId, time, verifications) {
+    if (!levelId) return;
+    try {
+      const all = JSON.parse(localStorage.getItem('hearts-level-stats') || '{}');
+      all[levelId] = { elapsedTime: time, verifyCount: verifications };
+      localStorage.setItem('hearts-level-stats', JSON.stringify(all));
+    } catch (e) {
+      console.warn('Erreur sauvegarde stats niveau:', e);
+    }
+  }
+
+  function getLevelStats(levelId) {
+    if (!levelId) return null;
+    try {
+      const all = JSON.parse(localStorage.getItem('hearts-level-stats') || '{}');
+      return all[levelId] || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Remplir la grille avec la solution complète (cœurs + croix)
   function fillWithSolution() {
     if (!puzzle.value || !puzzle.value.solution) return;
@@ -412,6 +446,12 @@ export function useGame() {
     );
     isWon.value = true;
     stopTimer();
+    // Restaurer les stats sauvegardées pour ce niveau
+    const stats = getLevelStats(getCurrentLevelId());
+    if (stats) {
+      elapsedTime.value = stats.elapsedTime;
+      verifyCount.value = stats.verifyCount;
+    }
     saveGameState();
   }
 
