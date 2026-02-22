@@ -368,14 +368,19 @@ const pickerGridCells = computed(() => {
   for (let i = 0; i < startOffset; i++)
     cells.push({ key: `empty-${i}`, dateKey: null, available: false });
 
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const cellDate = new Date(dateKey);
+    const isFuture = cellDate > todayDate;
     cells.push({
       key: dateKey,
       dateKey,
       day,
-      available: availableDateKeys.has(dateKey),
+      available: availableDateKeys.has(dateKey) && !isFuture,
       isToday: dateKey === todayStr,
+      isFuture,
     });
   }
   return cells;
@@ -406,6 +411,13 @@ const vClickOutside = {
 };
 
 function loadArchiveDay(day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayDate = new Date(day.dateKey);
+  if (dayDate > today) {
+    error.value = "Vous ne pouvez pas jouer aux puzzles des jours futurs.";
+    return;
+  }
   currentArchiveDate.value = day.dateKey;
   isPracticeMode.value = false; // les jours d'archive ne sont pas des niveaux practice
   if (day.isToday) {
