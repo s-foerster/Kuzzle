@@ -64314,5 +64314,284 @@
       "pairingStrategy": "proximity",
       "configDescription": "Facile - Commence avec des petites zones faciles à résoudre"
     }
+  },
+  "2026-02-27": {
+    "puzzle": {
+      "zones": [
+        [
+          0,
+          4,
+          4,
+          1,
+          1,
+          1,
+          6,
+          5,
+          5,
+          5
+        ],
+        [
+          0,
+          4,
+          4,
+          4,
+          4,
+          1,
+          6,
+          2,
+          2,
+          5
+        ],
+        [
+          0,
+          0,
+          3,
+          4,
+          4,
+          4,
+          6,
+          2,
+          5,
+          5
+        ],
+        [
+          7,
+          7,
+          3,
+          4,
+          4,
+          6,
+          6,
+          2,
+          5,
+          5
+        ],
+        [
+          7,
+          7,
+          3,
+          4,
+          4,
+          4,
+          6,
+          5,
+          5,
+          5
+        ],
+        [
+          7,
+          7,
+          3,
+          4,
+          4,
+          4,
+          6,
+          6,
+          5,
+          8
+        ],
+        [
+          7,
+          7,
+          7,
+          9,
+          9,
+          9,
+          6,
+          6,
+          5,
+          8
+        ],
+        [
+          7,
+          7,
+          9,
+          9,
+          9,
+          9,
+          6,
+          6,
+          6,
+          8
+        ],
+        [
+          7,
+          7,
+          7,
+          9,
+          9,
+          9,
+          6,
+          8,
+          8,
+          8
+        ],
+        [
+          7,
+          7,
+          7,
+          9,
+          9,
+          9,
+          8,
+          8,
+          8,
+          8
+        ]
+      ],
+      "solution": [
+        [
+          true,
+          false,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          true,
+          false
+        ],
+        [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true
+        ],
+        [
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          false,
+          false
+        ]
+      ]
+    },
+    "generatedAt": "2026-02-27T17:07:27.839Z",
+    "metadata": {
+      "seed": "20260227",
+      "method": "hearts-first",
+      "difficulty": "easy",
+      "gridSize": 10,
+      "zoneCount": 10,
+      "totalCells": 100,
+      "generationTime": 7323,
+      "validationTime": 4,
+      "totalAttempts": 2446,
+      "rejectedNonUnique": 0,
+      "isUnique": true,
+      "heartCount": 20,
+      "zoneSizes": [
+        4,
+        4,
+        4,
+        4,
+        17,
+        13,
+        14,
+        17,
+        10,
+        13
+      ],
+      "minSmallZones": 4,
+      "smallZoneSize": 4,
+      "pairingStrategy": "proximity",
+      "configDescription": "Facile - Commence avec des petites zones faciles à résoudre"
+    }
   }
 }
