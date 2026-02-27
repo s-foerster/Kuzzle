@@ -84,6 +84,7 @@
               'cal-day--active': currentArchiveDate === day.dateKey,
               'cal-day--today': day.isToday,
               'cal-day--done': completedLevels.includes(day.dateKey),
+              'cal-day--locked': isDayLocked(day.dateKey),
             }"
             @click="loadArchiveDay(day)"
           >
@@ -94,6 +95,7 @@
               class="cal-done-badge"
               >✓</span
             >
+            <span v-else-if="isDayLocked(day.dateKey)" class="cal-lock-badge">🔒</span>
           </button>
         </div>
         <button
@@ -152,6 +154,7 @@
                 'cal-picker-cell--active': cell.dateKey === currentArchiveDate,
                 'cal-picker-cell--done':
                   cell.dateKey && completedLevels.includes(cell.dateKey),
+                'cal-picker-cell--locked': cell.dateKey && isDayLocked(cell.dateKey),
               }"
               :disabled="!cell.available"
               @click="cell.available && loadArchiveDateKey(cell.dateKey)"
@@ -162,10 +165,51 @@
                 class="cal-picker-done"
                 >✓</span
               >
+              <span
+                v-else-if="cell.dateKey && isDayLocked(cell.dateKey) && cell.available"
+                class="cal-picker-lock"
+              >🔒</span>
             </button>
           </div>
         </div>
       </Transition>
+
+      <!-- Modal Paywall Premium -->
+      <Teleport to="body">
+        <Transition name="modal-fade">
+          <div
+            v-if="showPremiumPaywall"
+            class="paywall-overlay"
+            @click.self="showPremiumPaywall = false"
+          >
+            <div class="paywall-modal" role="dialog" aria-modal="true">
+              <button class="paywall-close" @click="showPremiumPaywall = false" aria-label="Fermer">×</button>
+              <div class="paywall-icon">⭐</div>
+              <h2 class="paywall-title">Contenu Premium</h2>
+              <p class="paywall-date">Puzzle du {{ paywallDateLabel }}</p>
+              <p class="paywall-desc">
+                L’archive complète est réservée aux membres <strong>Pass Premium</strong>.
+                Les non-membres ont accès aux <strong>3 derniers jours</strong> (aujourd’hui + 2 jours).
+              </p>
+              <ul class="paywall-perks">
+                <li>✨ Accès à tous les puzzles passés</li>
+                <li>💡 Indices illimités</li>
+                <li>🎨 Thèmes exclusifs</li>
+                <li>💛 Soutenir le développement de Kuzzle</li>
+              </ul>
+              <p v-if="paywallError" class="paywall-error">{{ paywallError }}</p>
+              <button
+                class="btn-paywall-cta"
+                :disabled="paywallLoading"
+                @click="handlePaywallCheckout"
+              >
+                {{ paywallLoading ? 'Chargement…' : 'Obtenir le Pass Premium — 5 €/mois' }}
+              </button>
+              <p class="paywall-hint">Annulation à tout moment depuis le portail.</p>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
 
       <!-- Grille -->
       <div class="grid-wrapper" :class="{ 'grid-blurred': isPaused }">
@@ -222,11 +266,13 @@ import HowToPlayModal from "../components/HowToPlay/HowToPlayModal.vue";
 import { useGame } from "../composables/useGame.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
+import { useSubscription } from "../composables/useSubscription.js";
 import puzzleCacheData from "../../puzzle-cache.json";
 
 const router = useRouter();
 const navStore = useNavigationStore();
 const authStore = useAuthStore();
+const { startCheckout, loading: paywallLoading, error: paywallError } = useSubscription();
 
 // ── Composable jeu ───────────────────────────────────────────────────────────
 const {
@@ -387,6 +433,37 @@ const pickerGridCells = computed(() => {
   return cells;
 });
 
+// ── Restriction Premium ───────────────────────────────────────────────────────
+// Nombre de jours d'archive accessibles aux non-premium (aujourd'hui + 2 jours)
+const FREE_DAYS = 2;
+
+/**
+ * Retourne true si ce dateKey est verrouillé pour l'utilisateur courant.
+ * Un jour est verrouillé si : non-premium ET plus de FREE_DAYS jours de retard.
+ */
+function isDayLocked(dateKey) {
+  if (authStore.isPremium) return false; // premium = tout accès
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dayDate = new Date(y, m - 1, d);
+  const diffDays = Math.round((today - dayDate) / 86400000);
+  return diffDays > FREE_DAYS;
+}
+
+// ── Modal Paywall ─────────────────────────────────────────────────────────────
+const showPremiumPaywall = ref(false);
+const paywallDateLabel   = ref('');
+
+async function handlePaywallCheckout() {
+  if (!authStore.isLoggedIn) {
+    // Rediriger vers le profil pour se connecter
+    router.push('/profil');
+    return;
+  }
+  await startCheckout();
+}
+
 function loadArchiveDateKey(dateKey) {
   if (!dateKey) return;
   const isToday = dateKey === todayKey;
@@ -414,15 +491,25 @@ const vClickOutside = {
 function loadArchiveDay(day) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  // Parsé en heure locale (pas UTC) pour éviter le décalage de fuseau horaire
   const [dy, dm, dd] = day.dateKey.split("-").map(Number);
   const dayDate = new Date(dy, dm - 1, dd);
   if (dayDate > today) {
     error.value = "Vous ne pouvez pas jouer aux puzzles des jours futurs.";
     return;
   }
+
+  // ── Restriction Premium ───────────────────────────────────────────
+  if (isDayLocked(day.dateKey)) {
+    // Afficher le modal paywall au lieu de charger le puzzle
+    paywallDateLabel.value = dayDate.toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+    showPremiumPaywall.value = true;
+    return;
+  }
+
   currentArchiveDate.value = day.dateKey;
-  isPracticeMode.value = false; // les jours d'archive ne sont pas des niveaux practice
+  isPracticeMode.value = false;
   if (day.isToday) {
     initPuzzle();
     return;
@@ -1024,6 +1111,140 @@ onMounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Jours verrouillés (non-premium) ──────────────────────────────────────── */
+.cal-day--locked .cal-weekday,
+.cal-day--locked .cal-num {
+  opacity: 0.38;
+}
+.cal-day--locked { cursor: pointer; }
+.cal-lock-badge {
+  font-size: 0.55rem;
+  line-height: 1;
+}
+.cal-picker-cell--locked.cal-picker-cell--available {
+  color: var(--color-text-soft);
+  opacity: 0.55;
+  cursor: pointer; /* toujours cliquable pour déclencher le paywall */
+}
+.cal-picker-cell--locked.cal-picker-cell--available:hover {
+  background: #fef3c7;
+  color: #b45309;
+  opacity: 1;
+}
+.cal-picker-lock {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 0.42rem;
+  line-height: 1;
+}
+
+/* ── Modal Paywall Premium ────────────────────────────────────────────────── */
+.paywall-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(10, 8, 20, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.paywall-modal {
+  position: relative;
+  background: var(--color-bg-card, #fff);
+  border: 1.5px solid #fcd34d;
+  border-radius: var(--radius-xl, 20px);
+  padding: 2.5rem 2rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  animation: paywall-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes paywall-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.paywall-close {
+  position: absolute;
+  top: 0.85rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.paywall-close:hover { color: var(--color-text); }
+
+.paywall-icon  { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.paywall-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--color-text);
+  margin: 0 0 0.2rem;
+}
+.paywall-date {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+  margin: 0 0 0.9rem;
+  font-style: italic;
+}
+.paywall-desc {
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  margin: 0 0 1rem;
+  line-height: 1.55;
+}
+.paywall-perks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+.paywall-perks li {
+  font-size: 0.87rem;
+  color: var(--color-text);
+}
+.btn-paywall-cta {
+  width: 100%;
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45);
+  transition: all 0.2s ease;
+}
+.btn-paywall-cta:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55);
+}
+.btn-paywall-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.paywall-error {
+  font-size: 0.82rem;
+  color: var(--color-error, #dc2626);
+  margin: 0 0 0.6rem;
+}
+.paywall-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  margin: 0.6rem 0 0;
+  opacity: 0.7;
 }
 
 /* Check message */
