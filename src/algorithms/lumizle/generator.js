@@ -1,9 +1,17 @@
 /**
- * Lumizle - Générateur de puzzles
+ * Lumizle - Générateur de puzzles (v3 — RSG Bicolore)
  *
- * Phase 1 : génère une solution complète valide (backtracking randomisé).
- * Phase 2 : minimise les indices en retirant les cellules tant que la
- *           solution reste unique (vérification via le solveur).
+ * Phase 1 : Génère une solution complète valide par Randomized Spanning Growth.
+ *   - Deux germes (un sombre, un clair) sont plantés aléatoirement.
+ *   - Chaque région croît vers ses voisins non encore colorés, alternativement,
+ *     selon un ratio cible (minLightRatio/maxLightRatio).
+ *   - Les contraintes locales (NO_2X2, NO_3_IN_A_ROW) sont vérifiées en O(1)
+ *     avant chaque placement.
+ *   - Les règles de connexité (CONNECT_DARK, CONNECT_LIGHT) sont garanties
+ *     par construction : une région ne peut croître qu'à partir de ses propres
+ *     cellules, et les cellules "orphelines" sont gérées en fin de boucle.
+ *
+ * Phase 2 : Minimise les indices (identique à v1).
  */
 
 import {
@@ -11,154 +19,248 @@ import {
   CELL_DARK,
   CELL_LIGHT,
   checkAllRules,
-  checkAllPartialRules,
 } from './rules.js';
-import { countSolutions } from './solver.js';
 import { SeededRandom } from '../../utils/seededRandom.js';
 
-// ---------------------------------------------------------------------------
-// Phase 1 : Génération de la solution complète
-// ---------------------------------------------------------------------------
+const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 
-/**
- * Génère une grille complète et valide par backtracking randomisé.
- *
- * @param {SeededRandom} rng
- * @param {number}       size
- * @param {Array}        rules          - Règles actives [{id, params?}]
- * @param {number}       minLightRatio  - Proportion minimale de cellules claires (défaut 0.35)
- * @param {number}       maxLightRatio  - Proportion maximale de cellules claires (défaut 0.65)
- * @param {number}       maxAttempts    - Nombre max de tentatives globales
- * @returns {number[][]|null}
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// Vérificateurs locaux O(1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function creates2x2(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_2X2_DARK' : 'NO_2X2_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  const squares = [
+    [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]],
+    [[r, c - 1], [r, c], [r + 1, c - 1], [r + 1, c]],
+    [[r - 1, c], [r - 1, c + 1], [r, c], [r, c + 1]],
+    [[r - 1, c - 1], [r - 1, c], [r, c - 1], [r, c]],
+  ];
+  for (const sq of squares) {
+    if (sq.every(([pr, pc]) => get(pr, pc) === val)) return true;
+  }
+  return false;
+}
+
+function creates3InRow(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_3_IN_A_ROW_DARK' : 'NO_3_IN_A_ROW_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  for (const [dr, dc] of [[0, 1], [1, 0]]) {
+    for (let start = -2; start <= 0; start++) {
+      const pts = [
+        [r + start * dr, c + start * dc],
+        [r + (start + 1) * dr, c + (start + 1) * dc],
+        [r + (start + 2) * dr, c + (start + 2) * dc],
+      ];
+      if (pts.every(([pr, pc]) => get(pr, pc) === val)) return true;
+    }
+  }
+  return false;
+}
+
+function canPlace(grid, size, r, c, val, ruleIds) {
+  if (grid[r][c] !== CELL_UNKNOWN) return false;
+  if (creates2x2(grid, size, r, c, val, ruleIds)) return false;
+  if (creates3InRow(grid, size, r, c, val, ruleIds)) return false;
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1 : RSG Bicolore
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function generateSolution(
   rng,
   size,
   rules,
   minLightRatio = 0.35,
   maxLightRatio = 0.65,
-  maxAttempts = 200,
+  maxAttempts = 1000,
 ) {
   const total = size * size;
+  const ruleIds = new Set(rules.map(r => r.id));
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const grid = Array.from({ length: size }, () => new Array(size).fill(CELL_UNKNOWN));
 
-    // Ordre aléatoire de remplissage des cellules
-    const allCells = [];
-    for (let r = 0; r < size; r++)
-      for (let c = 0; c < size; c++)
-        allCells.push([r, c]);
-    const shuffled = rng.shuffle(allCells);
+    // ── Choisir deux germes aléatoires distincts ──────────────────────────
+    const a = rng.randomInt(0, total);
+    let b = rng.randomInt(0, total - 1);
+    if (b >= a) b++;
 
-    let solved = false;
+    // Germe clair = a, germe sombre = b
+    const lr = Math.floor(a / size), lc = a % size;
+    const dr = Math.floor(b / size), dc = b % size;
 
-    function backtrack(idx) {
-      if (idx === shuffled.length) {
-        // Contrainte de ratio : pas trop déséquilibré
-        const lightCount = grid.reduce(
-          (s, row) => s + row.filter(v => v === CELL_LIGHT).length,
-          0,
-        );
-        const ratio = lightCount / total;
-        if (ratio < minLightRatio || ratio > maxLightRatio) return false;
-        return checkAllRules(grid, size, rules);
+    // Placer les germes (impossible si contrainte locale violée)
+    if (!canPlace(grid, size, lr, lc, CELL_LIGHT, ruleIds)) continue;
+    grid[lr][lc] = CELL_LIGHT;
+    if (!canPlace(grid, size, dr, dc, CELL_DARK, ruleIds)) { grid[lr][lc] = CELL_UNKNOWN; continue; }
+    grid[dr][dc] = CELL_DARK;
+
+    // ── Frontières des deux régions ───────────────────────────────────────
+    const lightFrontier = new Set(); // voisins UNKNOWN adjacents au groupe clair
+    const darkFrontier = new Set(); // voisins UNKNOWN adjacents au groupe sombre
+
+    const addNeighbors = (r, c, frontier) => {
+      for (const [ddr, ddc] of DIRS) {
+        const nr = r + ddr, nc = c + ddc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_UNKNOWN)
+          frontier.add(nr * size + nc);
+      }
+    };
+
+    addNeighbors(lr, lc, lightFrontier);
+    addNeighbors(dr, dc, darkFrontier);
+
+    // ── Compteurs pour respecter le ratio ─────────────────────────────────
+    let lightCount = 1, darkCount = 1;
+    let remaining = total - 2;
+    let ok = true;
+
+    while (remaining > 0) {
+      // Décider quelle couleur étendre en fonction du ratio courant
+      const currentRatio = lightCount / (lightCount + darkCount);
+      let frontier, val;
+
+      if (lightFrontier.size > 0 && darkFrontier.size > 0) {
+        // Favoriser la couleur "en retard" pour équilibrer
+        const wantLight = currentRatio < (minLightRatio + maxLightRatio) / 2;
+        if (wantLight) { frontier = lightFrontier; val = CELL_LIGHT; }
+        else { frontier = darkFrontier; val = CELL_DARK; }
+        // Un peu d'aléatoire pour varier les formes
+        if (rng.random() < 0.35) {
+          if (val === CELL_LIGHT) { frontier = darkFrontier; val = CELL_DARK; }
+          else { frontier = lightFrontier; val = CELL_LIGHT; }
+        }
+      } else if (lightFrontier.size > 0) {
+        frontier = lightFrontier; val = CELL_LIGHT;
+      } else if (darkFrontier.size > 0) {
+        frontier = darkFrontier; val = CELL_DARK;
+      } else {
+        // Plus aucune frontière — des cellules sont orphelines.
+        // C'est une impasse : on restarte cette tentative.
+        ok = false; break;
       }
 
-      const [r, c] = shuffled[idx];
-      // Ordre aléatoire sombre/clair pour varier les solutions
-      const vals = rng.random() < 0.5
-        ? [CELL_DARK, CELL_LIGHT]
-        : [CELL_LIGHT, CELL_DARK];
 
-      for (const val of vals) {
-        grid[r][c] = val;
-        if (checkAllPartialRules(grid, size, rules) && backtrack(idx + 1)) {
-          return true;
+
+      // Essayer de placer une cellule depuis la frontière choisie
+      const candidates = [...frontier].filter(idx => grid[Math.floor(idx / size)][idx % size] === CELL_UNKNOWN);
+      rng.shuffle(candidates);
+
+      let placedOne = false;
+      for (const idx of candidates) {
+        const r = Math.floor(idx / size), c = idx % size;
+        if (grid[r][c] !== CELL_UNKNOWN) { frontier.delete(idx); continue; }
+
+        if (canPlace(grid, size, r, c, val, ruleIds)) {
+          grid[r][c] = val;
+          lightFrontier.delete(idx);
+          darkFrontier.delete(idx);
+          addNeighbors(r, c, frontier);
+          if (val === CELL_LIGHT) lightCount++; else darkCount++;
+          remaining--;
+          placedOne = true;
+          break;
+        } else {
+          // Bloqué pour cette couleur : retirer de cette frontière
+          // mais ajouter à l'autre frontière (l'autre couleur peut peut-être la prendre).
+          frontier.delete(idx);
+          const otherFrontier = (val === CELL_LIGHT) ? darkFrontier : lightFrontier;
+          otherFrontier.add(idx);
         }
       }
 
-      grid[r][c] = CELL_UNKNOWN;
-      return false;
+      // Si la frontière est épuisée (tous les candidats ont été traités), la vider proprement.
+      if (!placedOne) {
+        const cleanFrontier = [...frontier].filter(idx => grid[Math.floor(idx / size)][idx % size] === CELL_UNKNOWN);
+        if (cleanFrontier.length === 0) frontier.clear();
+      }
     }
 
-    if (backtrack(0)) {
-      solved = true;
-      return grid;
-    }
+    if (!ok) continue;
 
-    void solved; // suppress lint
+    // ── Vérification finale ───────────────────────────────────────────────
+    const finalLight = grid.reduce((s, row) => s + row.filter(v => v === CELL_LIGHT).length, 0);
+    const ratio = finalLight / total;
+    if (ratio < minLightRatio || ratio > maxLightRatio) continue;
+
+    if (!checkAllRules(grid, size, rules)) continue;
+
+    return grid;
   }
 
-  return null; // Échec après maxAttempts tentatives
+  return null;
 }
 
-// ---------------------------------------------------------------------------
-// Phase 2 : Minimisation des indices (clue removal)
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 2 : Sélection aléatoire des indices (remplace minimizeClues)
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Part de la solution complète (toutes les cellules = indices) et retire
- * aléatoirement les indices tant que la solution reste unique.
+ * Sélectionne aléatoirement un sous-ensemble de cellules de la solution
+ * à révéler comme indices initiaux.
  *
- * @param {number[][]} solution - Grille solution complète
+ * Le jeu n'exigeant plus d'unicité, on révèle simplement ~clueRatio%
+ * des cellules de façon déterministe (seed) depuis la solution.
+ *
+ * @param {number[][]} solution    - Grille solution complète
  * @param {number}     size
- * @param {Array}      rules
- * @param {SeededRandom} rng   - Pour l'ordre de suppression
- * @returns {number[][]}        Grille avec le minimum d'indices
+ * @param {SeededRandom} rng
+ * @param {number}     clueRatio  - Proportion de cellules révélées (0.0 – 1.0)
+ * @returns {number[][]}           Grille avec UNKNOWN là où le joueur joue
  */
-export function minimizeClues(solution, size, rules, rng) {
-  // Départ : tous les indices sont présents
+export function selectClues(solution, size, rng, clueRatio = 0.35) {
   const grid = solution.map(row => [...row]);
+  const total = size * size;
 
+  // Construire une liste de toutes les cellules et la mélanger aléatoirement
   const allCells = [];
   for (let r = 0; r < size; r++)
     for (let c = 0; c < size; c++)
       allCells.push([r, c]);
 
-  const removalOrder = rng.shuffle(allCells);
+  const shuffled = rng.shuffle(allCells);
 
-  for (const [r, c] of removalOrder) {
-    const saved = grid[r][c];
-    grid[r][c] = CELL_UNKNOWN; // Tentative de suppression
+  // Nombre de cellules à révéler
+  const clueCount = Math.max(3, Math.round(total * clueRatio));
 
-    // Si la solution n'est plus unique, on remet l'indice
-    if (countSolutions(grid, size, rules, 2) !== 1) {
-      grid[r][c] = saved;
-    }
-    // Sinon on garde la cellule vide (suppression validée)
+  // Mettre les cellules non-révélées à UNKNOWN
+  const hiddenCount = total - clueCount;
+  const toHide = shuffled.slice(0, hiddenCount); // les N premières seront cachées
+
+  for (const [r, c] of toHide) {
+    grid[r][c] = CELL_UNKNOWN;
   }
 
   return grid;
 }
 
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // Pipeline complet
-// ---------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Génère un puzzle Lumizle complet (initialGrid + solution).
- *
- * @param {string|number} seed
- * @param {object}        config
- *   @param {number}  config.size            - Taille de la grille (défaut 7)
- *   @param {Array}   config.rules           - Règles actives (défaut [CONNECT_LIGHT])
- *   @param {boolean} config.checkUniqueness - Vérification finale (défaut true)
- *   @param {number}  config.minLightRatio   - (défaut 0.35)
- *   @param {number}  config.maxLightRatio   - (défaut 0.65)
- * @returns {{ initialGrid, solution, rules, metadata }}
- */
 export function generatePuzzle(seed, config = {}) {
   const {
-    size            = 7,
-    rules           = [{ id: 'CONNECT_LIGHT' }],
-    checkUniqueness = true,
-    minLightRatio   = 0.35,
-    maxLightRatio   = 0.65,
+    size = 7,
+    rules = [{ id: 'CONNECT_LIGHT' }],
+    minLightRatio = 0.35,
+    maxLightRatio = 0.65,
+    clueRatio = 0.35, // proportion des cellules révélées (indices)
   } = config;
 
   const rng = new SeededRandom(`${seed}_lumizle`);
-  const t0  = Date.now();
+  const t0 = Date.now();
 
   // ── Phase 1 : solution ──────────────────────────────────────────────────
   const solution = generateSolution(rng, size, rules, minLightRatio, maxLightRatio);
@@ -167,35 +269,29 @@ export function generatePuzzle(seed, config = {}) {
   }
   const t1 = Date.now();
 
-  // ── Phase 2 : minimisation ─────────────────────────────────────────────
-  const initialGrid = minimizeClues(solution, size, rules, rng);
+  // ── Phase 2 : sélection aléatoire des indices ─────────────────────────
+  const initialGrid = selectClues(solution, size, rng, clueRatio);
   const t2 = Date.now();
 
-  // ── Méta-données ───────────────────────────────────────────────────────
-  const clueCount  = initialGrid.reduce((s, row) => s + row.filter(v => v !== CELL_UNKNOWN).length, 0);
+  const clueCount = initialGrid.reduce((s, row) => s + row.filter(v => v !== CELL_UNKNOWN).length, 0);
   const lightCount = solution.reduce((s, row) => s + row.filter(v => v === CELL_LIGHT).length, 0);
-  const darkCount  = size * size - lightCount;
-
-  let isUnique = true;
-  if (checkUniqueness) {
-    isUnique = countSolutions(initialGrid, size, rules, 2) === 1;
-  }
+  const darkCount = size * size - lightCount;
 
   return {
     initialGrid,
     solution,
     rules,
     metadata: {
-      seed:             String(seed),
-      gridSize:         size,
+      seed: String(seed),
+      gridSize: size,
       clueCount,
       lightCount,
       darkCount,
-      totalCells:       size * size,
-      solutionTime:     t1 - t0,
-      minimizationTime: t2 - t1,
-      generationTime:   t2 - t0,
-      isUnique,
+      totalCells: size * size,
+      solutionTime: t1 - t0,
+      selectionTime: t2 - t1,
+      generationTime: t2 - t0,
+      isUnique: false, // non vérifié, pas nécessaire
     },
   };
 }

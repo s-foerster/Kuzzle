@@ -15,27 +15,27 @@ import { getAllViolatingCells, CELL_UNKNOWN, CELL_DARK, CELL_LIGHT } from '../al
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
-const LS_STATE_PREFIX   = 'lumizle-game-state';
-const LS_COMPLETED_KEY  = 'lumizle-completed-levels';
-const MAX_UNDO          = 50;
+const LS_STATE_PREFIX = 'lumizle-game-state';
+const LS_COMPLETED_KEY = 'lumizle-completed-levels';
+const MAX_UNDO = 50;
 
 export function useLumizle() {
   // ── Core state ────────────────────────────────────────────────────────────
-  const puzzle      = ref(null);   // { initialGrid, solution, rules, metadata }
-  const gameState   = ref([]);     // Décisions joueur : NxN de 0/1/2
-  const isLoading   = ref(false);
-  const error       = ref(null);
+  const puzzle = ref(null);   // { initialGrid, solution, rules, metadata }
+  const gameState = ref([]);     // Décisions joueur : NxN de 0/1/2
+  const isLoading = ref(false);
+  const error = ref(null);
   const currentDate = ref('');     // 'YYYY-MM-DD' pour daily, id court pour practice
-  const isPractice  = ref(false);
+  const isPractice = ref(false);
 
   // ── Undo ──────────────────────────────────────────────────────────────────
   const undoHistory = ref([]);
 
   // ── Timer ─────────────────────────────────────────────────────────────────
-  const elapsedSeconds  = ref(0);
-  const isTimerStarted  = ref(false);
-  const isPaused        = ref(false);
-  let   timerInterval   = null;
+  const elapsedSeconds = ref(0);
+  const isTimerStarted = ref(false);
+  const isPaused = ref(false);
+  let timerInterval = null;
 
   const formattedTime = computed(() => {
     const s = elapsedSeconds.value;
@@ -113,26 +113,29 @@ export function useLumizle() {
   const violatingCells = computed(() => {
     if (!puzzle.value) return new Set();
     const size = getSize();
-    const eff  = buildEffectiveGrid();
+    const eff = buildEffectiveGrid();
     return getAllViolatingCells(eff, size, puzzle.value.rules);
   });
 
   // ── Victoire ──────────────────────────────────────────────────────────────
   const isWon = computed(() => {
     if (!puzzle.value) return false;
-    if (violatingCells.value.size > 0) return false;
 
-    const { initialGrid, solution, metadata: { gridSize: size } } = puzzle.value;
+    // 1. Toutes les cellules joueur doivent être remplies (pas d'UNKNOWN)
+    const { initialGrid, metadata: { gridSize: size } } = puzzle.value;
     for (let r = 0; r < size; r++) {
       for (let c = 0; c < size; c++) {
-        if (initialGrid[r][c] !== CELL_UNKNOWN) continue; // cellule fixe, ok
-        const playerVal = gameState.value[r]?.[c] ?? CELL_UNKNOWN;
-        if (playerVal === CELL_UNKNOWN) return false;       // cellule non remplie
-        if (playerVal !== solution[r][c]) return false;     // valeur incorrecte
+        if (initialGrid[r][c] !== CELL_UNKNOWN) continue; // cellule fixe OK
+        if ((gameState.value[r]?.[c] ?? CELL_UNKNOWN) === CELL_UNKNOWN) return false;
       }
     }
+
+    // 2. Aucune violation de règle
+    if (violatingCells.value.size > 0) return false;
+
     return true;
   });
+
 
   // ── Undo helpers ──────────────────────────────────────────────────────────
   function pushHistory() {
@@ -154,7 +157,7 @@ export function useLumizle() {
    */
   function nextCellValue(current) {
     if (current === CELL_UNKNOWN) return CELL_DARK;
-    if (current === CELL_DARK)    return CELL_LIGHT;
+    if (current === CELL_DARK) return CELL_LIGHT;
     return CELL_UNKNOWN;
   }
 
@@ -233,9 +236,9 @@ export function useLumizle() {
   // ── Chargement de puzzle ───────────────────────────────────────────────────
 
   function _loadPuzzleData(puzzleData, dateKey, practice = false) {
-    puzzle.value      = puzzleData;
+    puzzle.value = puzzleData;
     currentDate.value = dateKey;
-    isPractice.value  = practice;
+    isPractice.value = practice;
     undoHistory.value = [];
 
     const size = puzzleData.metadata.gridSize;
@@ -255,7 +258,7 @@ export function useLumizle() {
   /** Charge le puzzle quotidien depuis l'API. */
   async function initPuzzle(dateKey) {
     isLoading.value = true;
-    error.value     = null;
+    error.value = null;
     resetTimer();
 
     try {
@@ -272,7 +275,7 @@ export function useLumizle() {
 
   /** Charge directement un puzzle pré-généré (practice). */
   function initPracticePuzzle(puzzleData, id) {
-    error.value     = null;
+    error.value = null;
     isLoading.value = false;
     resetTimer();
     _loadPuzzleData(puzzleData, id, true);

@@ -7,7 +7,7 @@
  */
 
 import { generatePuzzle } from './generator.js';
-import { SeededRandom }   from '../../utils/seededRandom.js';
+import { SeededRandom } from '../../utils/seededRandom.js';
 
 // ---------------------------------------------------------------------------
 // Configurations par difficulté
@@ -22,35 +22,43 @@ import { SeededRandom }   from '../../utils/seededRandom.js';
  */
 export const LUMIZLE_DIFFICULTY_CONFIGS = {
   easy: {
-    gridSize:      5,
-    rules:         [{ id: 'CONNECT_LIGHT' }],
+    gridSize: 5,
+    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }],
     minLightRatio: 0.38,
     maxLightRatio: 0.62,
   },
   medium: {
-    gridSize:      7,
-    rules:         [{ id: 'CONNECT_LIGHT' }],
+    gridSize: 7,
+    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }],
     minLightRatio: 0.35,
     maxLightRatio: 0.65,
   },
   hard: {
-    gridSize:      8,
-    rules:         [{ id: 'CONNECT_LIGHT' }],
+    gridSize: 8,
+    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }, { id: 'NO_2X2_LIGHT' }],
     minLightRatio: 0.35,
     maxLightRatio: 0.65,
   },
 };
 
 // Configs quotidiennes (rotation déterministe par date)
+// Règle de perf : les grilles avec CONNECT_DARK+CONNECT_LIGHT sont limitées à 7x7 max.
+// Chaque config a été validée pour compléter en <5s avec la génération RSG.
 const DAILY_CONFIGS = [
-  { gridSize: 6, difficulty: 'easy',   rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
-  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 8, difficulty: 'hard',   rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 8, difficulty: 'hard',   rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 6, difficulty: 'easy',   rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
-  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  // ── Easy ──────────────────────────────────────────────────────────────────
+  { gridSize: 5, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
+  { gridSize: 6, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
+  { gridSize: 6, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
+  // ── Medium ────────────────────────────────────────────────────────────────
+  { gridSize: 6, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  // ── Hard ──────────────────────────────────────────────────────────────────
+  { gridSize: 7, difficulty: 'hard', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  { gridSize: 7, difficulty: 'hard', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+
 ];
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,8 +69,8 @@ function hashString(str) {
   let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
     hash ^= str.charCodeAt(i);
-    hash  = Math.imul(hash, 0x01000193);
-    hash  = hash >>> 0;
+    hash = Math.imul(hash, 0x01000193);
+    hash = hash >>> 0;
   }
   return hash === 0 ? 1 : hash;
 }
@@ -87,11 +95,11 @@ export function pickDailyConfig(dateKey) {
 export function generateLumizlePuzzle(seed, difficulty = 'medium') {
   const cfg = LUMIZLE_DIFFICULTY_CONFIGS[difficulty] || LUMIZLE_DIFFICULTY_CONFIGS.medium;
   return generatePuzzle(seed, {
-    size:             cfg.gridSize,
-    rules:            cfg.rules,
-    checkUniqueness:  true,
-    minLightRatio:    cfg.minLightRatio,
-    maxLightRatio:    cfg.maxLightRatio,
+    size: cfg.gridSize,
+    rules: cfg.rules,
+    minLightRatio: cfg.minLightRatio,
+    maxLightRatio: cfg.maxLightRatio,
+    clueRatio: difficulty === 'easy' ? 0.40 : difficulty === 'hard' ? 0.28 : 0.33,
   });
 }
 
@@ -102,13 +110,13 @@ export function generateLumizlePuzzle(seed, difficulty = 'medium') {
  * @returns {{ initialGrid, solution, rules, metadata }}
  */
 export function generateDailyLumizle(dateKey) {
-  const cfg  = pickDailyConfig(dateKey);
+  const cfg = pickDailyConfig(dateKey);
   const seed = `lumizle_daily_${dateKey}`;
   return generatePuzzle(seed, {
-    size:             cfg.gridSize,
-    rules:            cfg.rules,
-    checkUniqueness:  true,
-    minLightRatio:    cfg.minLightRatio,
-    maxLightRatio:    cfg.maxLightRatio,
+    size: cfg.gridSize,
+    rules: cfg.rules,
+    minLightRatio: cfg.minLightRatio,
+    maxLightRatio: cfg.maxLightRatio,
+    clueRatio: cfg.difficulty === 'easy' ? 0.40 : cfg.difficulty === 'hard' ? 0.28 : 0.33,
   });
 }

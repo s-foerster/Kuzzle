@@ -368,13 +368,13 @@ const pickerGridCells = computed(() => {
   for (let i = 0; i < startOffset; i++)
     cells.push({ key: `empty-${i}`, dateKey: null, available: false });
 
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-      const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      // Créer en heure locale (pas UTC) pour éviter le décalage de fuseau horaire
-      const cellDate = new Date(year, month, day);
-      const isFuture = cellDate > todayDate;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    // Créer en heure locale (pas UTC) pour éviter le décalage de fuseau horaire
+    const cellDate = new Date(year, month, day);
+    const isFuture = cellDate > todayDate;
     cells.push({
       key: dateKey,
       dateKey,
@@ -415,7 +415,7 @@ function loadArchiveDay(day) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   // Parsé en heure locale (pas UTC) pour éviter le décalage de fuseau horaire
-  const [dy, dm, dd] = day.dateKey.split('-').map(Number);
+  const [dy, dm, dd] = day.dateKey.split("-").map(Number);
   const dayDate = new Date(dy, dm - 1, dd);
   if (dayDate > today) {
     error.value = "Vous ne pouvez pas jouer aux puzzles des jours futurs.";
@@ -509,7 +509,10 @@ watch(isWon, async (won) => {
           { onConflict: "user_id,game_type,puzzle_date" },
         );
         if (saveError) {
-          console.error("❌ [GameView] Erreur sauvegarde Supabase:", saveError.message || saveError);
+          console.error(
+            "❌ [GameView] Erreur sauvegarde Supabase:",
+            saveError.message || saveError,
+          );
         } else {
           console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
         }

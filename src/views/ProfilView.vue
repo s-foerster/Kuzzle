@@ -26,6 +26,65 @@
         </div>
       </div>
 
+      <!-- ── Pass Premium ─────────────────────────────────────────── -->
+      <Transition name="fade">
+        <div v-if="paymentSuccess" class="profil-section profil-section--success">
+          <div class="success-banner">
+            <span class="success-icon">🎉</span>
+            <div>
+              <p class="success-title">Paiement confirmé ! Bienvenue dans le Pass Premium.</p>
+              <p class="success-sub">Toutes vos nouvelles fonctionnalités sont désormais actives.</p>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <div class="profil-section profil-section--premium" :class="{ 'profil-section--premium-active': authStore.isPremium }">
+        <!-- Non-premium : card de vente -->
+        <template v-if="!authStore.isPremium">
+          <div class="premium-sell-header">
+            <span class="premium-sell-icon">⭐</span>
+            <div>
+              <h2 class="premium-sell-title">Pass Premium</h2>
+              <p class="premium-sell-sub">Débloquez toutes les fonctionnalités — une seule fois.</p>
+            </div>
+          </div>
+          <ul class="premium-features">
+            <li>✨ Accès à l’archive complète (tous les puzzles passés)</li>
+            <li>💡 Indices illimités</li>
+            <li>🎨 Thèmes et couleurs exclusifs</li>
+            <li>💛 Soutenir le développement de Kuzzle</li>
+          </ul>
+          <p v-if="subscriptionError" class="field-error">{{ subscriptionError }}</p>
+          <button
+            class="btn btn-premium"
+            :disabled="subscriptionLoading"
+            @click="handleCheckout"
+          >
+            {{ subscriptionLoading ? 'Chargement…' : 'Obtenir le Pass Premium' }}
+          </button>
+        </template>
+
+        <!-- Premium actif : gestion -->
+        <template v-else>
+          <div class="premium-active-content">
+            <span class="premium-active-icon">⭐</span>
+            <div>
+              <h2 class="premium-active-title">Pass Premium actif</h2>
+              <p class="premium-active-sub">Merci pour votre soutien ! Vous avez accès à toutes les fonctionnalités.</p>
+            </div>
+          </div>
+          <p v-if="subscriptionError" class="field-error">{{ subscriptionError }}</p>
+          <button
+            class="btn btn-outline btn-sm"
+            :disabled="subscriptionLoading"
+            @click="handlePortal"
+          >
+            {{ subscriptionLoading ? 'Chargement…' : 'Gérer mon abonnement' }}
+          </button>
+        </template>
+      </div>
+
       <!-- ── Nom d'utilisateur ──────────────────────────────────────────── -->
       <div class="profil-section">
         <h2 class="section-title">Nom d'utilisateur</h2>
@@ -262,19 +321,36 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { useSubscription } from '../composables/useSubscription.js'
 import { supabase } from '../lib/supabase.js'
 
 const router    = useRouter()
+const route     = useRoute()
 const authStore = useAuthStore()
 
-// ── Initiales avatar (fallback) ───────────────────────────────────────────
+// ── Initiales avatar (fallback) ────────────────────────────────────────────
 const initials = computed(() => {
   const name = authStore.username || authStore.user?.email || '?'
   return name.replace(/[@._\-]/g, ' ').split(/\s+/).filter(Boolean)
     .map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 })
+
+// ── Pass Premium (Stripe) ─────────────────────────────────────────────────
+const {
+  startCheckout, openPortal,
+  loading: subscriptionLoading, error: subscriptionError,
+} = useSubscription()
+const paymentSuccess = ref(false)
+
+async function handleCheckout() {
+  await startCheckout()
+}
+
+async function handlePortal() {
+  await openPortal()
+}
 
 // ── Changement de pseudo ──────────────────────────────────────────────────
 const newUsername    = ref(authStore.username || '')
@@ -593,6 +669,20 @@ watch(
 
 onMounted(() => {
   newUsername.value = authStore.username || ''
+
+  // Détecter le retour Stripe après paiement (?success=true)
+  // et rafraîchir le profil pour mettre à jour is_premium.
+  if (route.query.success === 'true') {
+    paymentSuccess.value = true
+    // Rafraîchir le profil depuis Supabase (is_premium vient d'être mis à jour par le webhook)
+    if (authStore.user) {
+      authStore.fetchProfile(authStore.user.id)
+    }
+    // Nettoyer le paramètre de l'URL sans recharger la page
+    router.replace({ query: {} })
+    // Masquer la bannière après 6 secondes
+    setTimeout(() => { paymentSuccess.value = false }, 6000)
+  }
 })
 </script>
 
@@ -872,6 +962,70 @@ onMounted(() => {
   transition: opacity 0.15s;
 }
 .btn-danger-text:hover { opacity: 1; text-decoration: underline; }
+
+/* ── Pass Premium ── */
+.profil-section--success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+.success-banner {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+}
+.success-icon  { font-size: 1.6rem; flex-shrink: 0; }
+.success-title { font-weight: 700; font-size: 0.92rem; color: #166534; margin: 0 0 0.2rem; }
+.success-sub   { font-size: 0.82rem; color: #166534; opacity: 0.85; margin: 0; }
+
+.profil-section--premium {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fcd34d;
+}
+.profil-section--premium-active {
+  background: linear-gradient(135deg, #fffbeb 0%, #ecfdf5 100%);
+  border-color: #6ee7b7;
+}
+
+.premium-sell-header {
+  display: flex; align-items: flex-start; gap: 0.85rem; margin-bottom: 1rem;
+}
+.premium-sell-icon  { font-size: 1.75rem; flex-shrink: 0; }
+.premium-sell-title {
+  font-size: 1.05rem; font-weight: 800; color: var(--color-text); margin: 0 0 0.15rem;
+}
+.premium-sell-sub { font-size: 0.84rem; color: var(--color-text-soft); margin: 0; }
+
+.premium-features {
+  list-style: none; padding: 0; margin: 0 0 1.1rem;
+  display: flex; flex-direction: column; gap: 0.45rem;
+}
+.premium-features li {
+  font-size: 0.88rem; color: var(--color-text);
+}
+
+.btn-premium {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white; border: none; border-radius: var(--radius-md);
+  font-family: var(--font-family); font-size: 0.95rem; font-weight: 800;
+  cursor: pointer; letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  transition: all 0.2s ease;
+}
+.btn-premium:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.5);
+}
+.btn-premium:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.premium-active-content {
+  display: flex; align-items: flex-start; gap: 0.85rem; margin-bottom: 0.85rem;
+}
+.premium-active-icon  { font-size: 1.75rem; flex-shrink: 0; }
+.premium-active-title {
+  font-size: 1.05rem; font-weight: 800; color: var(--color-text); margin: 0 0 0.15rem;
+}
+.premium-active-sub { font-size: 0.84rem; color: var(--color-text-soft); margin: 0; }
+
 
 /* ── Modal suppression ── */
 .modal-overlay {

@@ -1,10 +1,14 @@
 /**
- * Lumizle - Solveur par backtracking
+ * Lumizle - Solveur par backtracking optimisé (v2)
  *
- * Compte le nombre de solutions d'un puzzle partiel en assignant
- * les cellules inconnues et en vérifiant toutes les règles actives.
- * S'arrête dès que `maxSolutions` solutions sont trouvées (2 par défaut,
- * ce qui suffit pour détecter le manque d'unicité).
+ * Améliorations par rapport à v1 :
+ *   1. MRV (Minimum Remaining Values) : on choisit en priorité la cellule
+ *      dont le domaine est le plus réduit après propagation locale.
+ *   2. Propagation locale O(1) : avant d'essayer une valeur, on vérifie les
+ *      contraintes locales (NO_2X2, NO_3_IN_A_ROW) sans BFS, ce qui prune
+ *      l'arbre de recherche très tôt.
+ *   3. Les règles globales (CONNECT_*) ne sont vérifiées qu'en feuille (grille
+ *      complète), mais les contraintes partielles font également du pruning.
  */
 
 import {
@@ -15,74 +19,142 @@ import {
   checkAllPartialRules,
 } from './rules.js';
 
-/**
- * Compte les solutions d'un puzzle.
- *
- * @param {number[][]} initialGrid - Grille avec clues fixes (0=inconnu, 1=sombre, 2=clair)
- * @param {number}     size        - Dimension de la grille
- * @param {Array}      rules       - Règles actives [{id, params?}]
- * @param {number}     maxSolutions - S'arrêter après N solutions trouvées
- * @returns {number}  Nombre de solutions (jusqu'à maxSolutions)
- */
-export function countSolutions(initialGrid, size, rules, maxSolutions = 2) {
-  // Collecter les cellules inconnues
-  const unknownCells = [];
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (initialGrid[r][c] === CELL_UNKNOWN) unknownCells.push([r, c]);
+// ─────────────────────────────────────────────────────────────────────────────
+// Contraintes locales O(1) — identiques à celles du générateur
+// ─────────────────────────────────────────────────────────────────────────────
+
+function creates2x2(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_2X2_DARK' : 'NO_2X2_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  const squares = [
+    [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]],
+    [[r, c - 1], [r, c], [r + 1, c - 1], [r + 1, c]],
+    [[r - 1, c], [r - 1, c + 1], [r, c], [r, c + 1]],
+    [[r - 1, c - 1], [r - 1, c], [r, c - 1], [r, c]],
+  ];
+  for (const sq of squares) {
+    if (sq.every(([pr, pc]) => get(pr, pc) === val)) return true;
+  }
+  return false;
+}
+
+function creates3InRow(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_3_IN_A_ROW_DARK' : 'NO_3_IN_A_ROW_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  for (const [dr, dc] of [[0, 1], [1, 0]]) {
+    for (let start = -2; start <= 0; start++) {
+      const pts = [
+        [r + start * dr, c + start * dc],
+        [r + (start + 1) * dr, c + (start + 1) * dc],
+        [r + (start + 2) * dr, c + (start + 2) * dc],
+      ];
+      if (pts.every(([pr, pc]) => get(pr, pc) === val)) return true;
     }
   }
+  return false;
+}
 
-  // Grille sans inconnues : vérification directe
+/** Retourne les valeurs localement autorisées pour (r,c). */
+function localDomain(grid, size, r, c, ruleIds) {
+  return [CELL_DARK, CELL_LIGHT].filter(val => {
+    if (creates2x2(grid, size, r, c, val, ruleIds)) return false;
+    if (creates3InRow(grid, size, r, c, val, ruleIds)) return false;
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Solveur principal avec MRV
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Compte le nombre de solutions d'un puzzle (jusqu'à maxSolutions).
+ * Utilise MRV + propagation locale pour pruner l'espace de recherche.
+ *
+ * @param {number[][]} initialGrid - Grille avec clues fixes
+ * @param {number}     size
+ * @param {Array}      rules       - [{id, params?}]
+ * @param {number}     maxSolutions - S'arrêter après N solutions (défaut 2)
+ * @returns {number}   Nombre de solutions trouvées (≤ maxSolutions)
+ */
+export function countSolutions(initialGrid, size, rules, maxSolutions = 2) {
+  const ruleIds = new Set(rules.map(r => r.id));
+
+  // Collecter les cellules inconnues
+  const unknownCells = [];
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (initialGrid[r][c] === CELL_UNKNOWN) unknownCells.push([r, c]);
+
   if (unknownCells.length === 0) {
     return checkAllRules(initialGrid, size, rules) ? 1 : 0;
   }
 
-  // Copie de travail modifiée en place pendant le backtracking
   const work = initialGrid.map(row => [...row]);
   let count = 0;
 
-  function backtrack(idx) {
-    if (idx === unknownCells.length) {
+  // Tableau des cellules non encore assignées (indices dans unknownCells)
+  function backtrack(remaining) {
+    if (remaining.length === 0) {
       if (checkAllRules(work, size, rules)) {
         count++;
-        return count >= maxSolutions; // true = arrêter la recherche
+        return count >= maxSolutions;
       }
       return false;
     }
 
-    const [r, c] = unknownCells[idx];
-
-    for (const val of [CELL_DARK, CELL_LIGHT]) {
-      work[r][c] = val;
-      if (checkAllPartialRules(work, size, rules)) {
-        if (backtrack(idx + 1)) return true; // propagation du stop
+    // ── MRV : choisir la cellule avec le moins de valeurs permises ──
+    let bestIdx = 0;
+    let bestDomain = null;
+    const checkN = Math.min(remaining.length, 8);
+    for (let i = 0; i < checkN; i++) {
+      const [r, c] = remaining[i];
+      const domain = localDomain(work, size, r, c, ruleIds);
+      if (bestDomain === null || domain.length < bestDomain.length) {
+        bestIdx = i;
+        bestDomain = domain;
+        if (bestDomain.length === 0) break;
       }
     }
 
-    work[r][c] = CELL_UNKNOWN; // restauration
+    const [r, c] = remaining[bestIdx];
+    const nextRemaining = remaining.filter((_, i) => i !== bestIdx);
+    const domain = bestDomain ?? localDomain(work, size, r, c, ruleIds);
+
+    if (domain.length === 0) return false; // dead end
+
+    for (const val of domain) {
+      work[r][c] = val;
+      if (checkAllPartialRules(work, size, rules)) {
+        if (backtrack(nextRemaining)) return true;
+      }
+    }
+
+    work[r][c] = CELL_UNKNOWN;
     return false;
   }
 
-  backtrack(0);
+  backtrack(unknownCells);
   return count;
 }
 
 /**
  * Trouve et retourne UNE solution valide, ou null si aucune n'existe.
- *
- * @param {number[][]} initialGrid
- * @param {number}     size
- * @param {Array}      rules
- * @returns {number[][]|null}
  */
 export function findSolution(initialGrid, size, rules) {
+  const ruleIds = new Set(rules.map(r => r.id));
   const unknownCells = [];
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
       if (initialGrid[r][c] === CELL_UNKNOWN) unknownCells.push([r, c]);
-    }
-  }
 
   if (unknownCells.length === 0) {
     return checkAllRules(initialGrid, size, rules)
@@ -91,27 +163,45 @@ export function findSolution(initialGrid, size, rules) {
   }
 
   const work = initialGrid.map(row => [...row]);
-  let found = false;
+  let found = null;
 
-  function backtrack(idx) {
-    if (idx === unknownCells.length) {
+  function backtrack(remaining) {
+    if (remaining.length === 0) {
       if (checkAllRules(work, size, rules)) {
-        found = true;
+        found = work.map(row => [...row]);
         return true;
       }
       return false;
     }
 
-    const [r, c] = unknownCells[idx];
-    for (const val of [CELL_DARK, CELL_LIGHT]) {
+    let bestIdx = 0;
+    let bestDomain = null;
+    const checkN = Math.min(remaining.length, 8);
+    for (let i = 0; i < checkN; i++) {
+      const [r, c] = remaining[i];
+      const domain = localDomain(work, size, r, c, ruleIds);
+      if (bestDomain === null || domain.length < bestDomain.length) {
+        bestIdx = i;
+        bestDomain = domain;
+        if (bestDomain.length === 0) break;
+      }
+    }
+
+    const [r, c] = remaining[bestIdx];
+    const nextRemaining = remaining.filter((_, i) => i !== bestIdx);
+    const domain = bestDomain ?? localDomain(work, size, r, c, ruleIds);
+
+    if (domain.length === 0) return false;
+
+    for (const val of domain) {
       work[r][c] = val;
-      if (checkAllPartialRules(work, size, rules) && backtrack(idx + 1)) return true;
+      if (checkAllPartialRules(work, size, rules) && backtrack(nextRemaining)) return true;
     }
 
     work[r][c] = CELL_UNKNOWN;
     return false;
   }
 
-  backtrack(0);
-  return found ? work : null;
+  backtrack(unknownCells);
+  return found;
 }
