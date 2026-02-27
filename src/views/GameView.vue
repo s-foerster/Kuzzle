@@ -525,9 +525,49 @@ function loadArchiveDay(day) {
 }
 
 // ── Niveaux complétés (Hearts) ───────────────────────────────────────────────
+const LS_KEY = 'hearts-completed-levels';
 const completedLevels = ref(
-  JSON.parse(localStorage.getItem("hearts-completed-levels") || "[]"),
+  JSON.parse(localStorage.getItem(LS_KEY) || '[]'),
 );
+
+/**
+ * Fusionne les niveaux complétés depuis Supabase avec ceux du localStorage.
+ * On fait l'UNION (jamais de suppression) pour ne pas perdre de données locales.
+ * Appelée au mount si connecté, et à chaque connexion utilisateur.
+ */
+async function syncCompletedFromSupabase() {
+  if (!authStore.isLoggedIn) return;
+  try {
+    const { supabase } = await import('../lib/supabase.js');
+    if (!supabase) return;
+
+    const { data, error: fetchError } = await supabase
+      .from('game_results')
+      .select('puzzle_date')
+      .eq('user_id', authStore.user.id)
+      .eq('game_type', 'hearts')
+      .eq('completed', true);
+
+    if (fetchError) {
+      console.error('❌ [GameView] Erreur sync niveaux:', fetchError.message);
+      return;
+    }
+
+    const remoteIds = (data || []).map(r => r.puzzle_date);
+    const local = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    // Union sans doublons
+    const merged = [...new Set([...local, ...remoteIds])];
+
+    completedLevels.value = merged;
+    localStorage.setItem(LS_KEY, JSON.stringify(merged));
+    console.log(`✅ [GameView] ${merged.length} niveaux complétés synchronisés`);
+
+    // Re-déclencher le check pour le puzzle actuellement affiché
+    checkAndFillIfCompleted();
+  } catch (e) {
+    console.error('❌ [GameView] Exception sync niveaux:', e);
+  }
+}
 
 const currentLevelId = computed(() => {
   if (!currentDate.value) return null;
@@ -562,8 +602,8 @@ watch(isWon, async (won) => {
 
   // Construire l'ID du niveau
   let completedId;
-  if (currentDate.value.startsWith("practice_")) {
-    completedId = currentDate.value.replace("practice_", "");
+  if (currentDate.value.startsWith('practice_')) {
+    completedId = currentDate.value.replace('practice_', '');
   } else if (/^\d{8}$/.test(currentDate.value)) {
     completedId = `${currentDate.value.slice(0, 4)}-${currentDate.value.slice(4, 6)}-${currentDate.value.slice(6, 8)}`;
   } else {
@@ -573,47 +613,51 @@ watch(isWon, async (won) => {
   // localStorage (toujours)
   if (!completedLevels.value.includes(completedId)) {
     completedLevels.value.push(completedId);
-    localStorage.setItem(
-      "hearts-completed-levels",
-      JSON.stringify(completedLevels.value),
-    );
+    localStorage.setItem(LS_KEY, JSON.stringify(completedLevels.value));
   }
 
-  // Supabase (si connecté et puzzle quotidien)
-  if (authStore.isLoggedIn && !currentDate.value.startsWith("practice_")) {
+  // Supabase (si connecté et puzzle quotidien — pas les practice)
+  if (authStore.isLoggedIn && !currentDate.value.startsWith('practice_')) {
     try {
-      const { supabase } = await import("../lib/supabase.js");
+      const { supabase } = await import('../lib/supabase.js');
       if (supabase) {
-        const { error: saveError } = await supabase.from("game_results").upsert(
+        const { error: saveError } = await supabase.from('game_results').upsert(
           {
             user_id: authStore.user.id,
-            game_type: "hearts",
+            game_type: 'hearts',
             puzzle_date: completedId,
             completed: true,
             time_seconds: elapsedTime.value,
             verify_count: verifyCount.value,
           },
-          { onConflict: "user_id,game_type,puzzle_date" },
+          { onConflict: 'user_id,game_type,puzzle_date' },
         );
         if (saveError) {
-          console.error(
-            "❌ [GameView] Erreur sauvegarde Supabase:",
-            saveError.message || saveError,
-          );
+          console.error('❌ [GameView] Erreur sauvegarde Supabase:', saveError.message || saveError);
         } else {
-          console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
+          console.log('✅ [GameView] Résultat sauvegardé dans Supabase');
         }
       }
     } catch (e) {
-      console.error("❌ [GameView] Supabase save exception:", e);
+      console.error('❌ [GameView] Supabase save exception:', e);
     }
   }
 });
 
+// Re-syncer si l'utilisateur se connecte après le montage du composant
+watch(
+  () => authStore.user?.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      syncCompletedFromSupabase();
+    }
+  },
+);
+
 // ── Init ─────────────────────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
   const pending = navStore.consumePendingPuzzle();
-  if (pending?.type === "practice") {
+  if (pending?.type === 'practice') {
     isPracticeMode.value = true;
     initPracticePuzzle(pending.data);
   } else {
@@ -621,7 +665,11 @@ onMounted(() => {
     currentArchiveDate.value = todayKey;
     initPuzzle();
   }
+
+  // Sync Supabase en parallèle dès le démarrage (sans bloquer le puzzle)
+  syncCompletedFromSupabase();
 });
+
 </script>
 
 <style scoped>
