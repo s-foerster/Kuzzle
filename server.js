@@ -61,7 +61,15 @@ function loadLumizleCache() {
 // Sauvegarder le cache sur disque
 function saveCache() {
   try {
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(puzzleCache, null, 2));
+    // Merger avec le fichier disque pour ne pas écraser les entrées
+    // ajoutées par generate-past.js / generate-future.js pendant l'exécution
+    let diskCache = {};
+    if (fs.existsSync(CACHE_FILE)) {
+      try { diskCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')); } catch (_) {}
+    }
+    const merged = { ...diskCache, ...puzzleCache };
+    puzzleCache = merged;
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(merged, null, 2));
     console.log('💾 Cache sauvegardé sur disque');
   } catch (err) {
     console.error('❌ Erreur sauvegarde cache:', err);
@@ -101,24 +109,9 @@ function pickConfigForDate(dateKey) {
   return PUZZLE_CONFIGS[idx];
 }
 
-// Nettoyer les vieux puzzles (garde seulement les 30 derniers jours)
+// Conservation de tous les puzzles (pas de nettoyage automatique)
 function cleanOldPuzzles() {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  let cleaned = 0;
-  for (const dateKey in puzzleCache) {
-    const puzzleDate = new Date(dateKey);
-    if (puzzleDate < thirtyDaysAgo) {
-      delete puzzleCache[dateKey];
-      cleaned++;
-    }
-  }
-
-  if (cleaned > 0) {
-    console.log(`🧹 Nettoyé ${cleaned} vieux puzzles (> 30j)`);
-    saveCache();
-  }
+  // Rien à faire : on garde tous les puzzles indéfiniment
 }
 
 // ── Middleware ────────────────────────────────────────────────────────────────

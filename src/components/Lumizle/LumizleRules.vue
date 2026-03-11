@@ -57,10 +57,20 @@ const props = defineProps({
   rules: { type: Array, required: true },
 });
 
-// Libellés complets (remplace {n} dans la description si besoin)
+// Traduction lisible des noms de patterns
+const PATTERN_LABELS = {
+  L_TROMINO:   'en L',
+  T_TETROMINO: 'en T',
+  S_TETROMINO: 'en S/Z',
+  PLUS:        'en croix',
+};
+
 function formatDescription(rule, params) {
   if (!params) return rule.description;
-  return rule.description.replace('{n}', params.n ?? '?');
+  let desc = rule.description;
+  if (params.n != null) desc = desc.replace('{n}', params.n);
+  if (params.patternName) desc = desc.replace('{patternName}', PATTERN_LABELS[params.patternName] ?? params.patternName);
+  return desc;
 }
 
 const resolvedRules = computed(() =>

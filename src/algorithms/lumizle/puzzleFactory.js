@@ -23,40 +23,115 @@ import { SeededRandom } from '../../utils/seededRandom.js';
 export const LUMIZLE_DIFFICULTY_CONFIGS = {
   easy: {
     gridSize: 5,
-    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }],
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 2 } },
+      { id: 'NO_2X2_DARK' },
+    ],
+    minLightRatio: 0.40,
+    maxLightRatio: 0.60,
+  },
+  medium: {
+    gridSize: 6,
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 2 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'ROW_EXACT_DARK', params: { n: 2 } },
+    ],
     minLightRatio: 0.38,
     maxLightRatio: 0.62,
   },
-  medium: {
-    gridSize: 7,
-    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }],
-    minLightRatio: 0.35,
-    maxLightRatio: 0.65,
-  },
   hard: {
-    gridSize: 8,
-    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }, { id: 'NO_2X2_LIGHT' }],
-    minLightRatio: 0.35,
-    maxLightRatio: 0.65,
+    gridSize: 7,
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 3 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'NO_2X2_LIGHT' },
+      { id: 'NURIBOU_STRIPES' },
+    ],
+    minLightRatio: 0.40,
+    maxLightRatio: 0.60,
   },
 };
 
-// Configs quotidiennes (rotation déterministe par date)
-// Règle de perf : les grilles avec CONNECT_DARK+CONNECT_LIGHT sont limitées à 7x7 max.
-// Chaque config a été validée pour compléter en <5s avec la génération RSG.
+// Configs quotidiennes — progression de difficulté variée
 const DAILY_CONFIGS = [
   // ── Easy ──────────────────────────────────────────────────────────────────
-  { gridSize: 5, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
-  { gridSize: 6, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
-  { gridSize: 6, difficulty: 'easy', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.38, maxLightRatio: 0.62 },
+  {
+    gridSize: 5, difficulty: 'easy',
+    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'DARK_REGION_SIZE', params: { n: 2 } }, { id: 'NO_2X2_DARK' }],
+    minLightRatio: 0.40, maxLightRatio: 0.60,
+  },
+  {
+    gridSize: 6, difficulty: 'easy',
+    rules: [{ id: 'CONNECT_LIGHT' }, { id: 'DARK_REGION_SIZE', params: { n: 2 } }, { id: 'NO_2X2_DARK' }],
+    minLightRatio: 0.38, maxLightRatio: 0.62,
+  },
   // ── Medium ────────────────────────────────────────────────────────────────
-  { gridSize: 6, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 7, difficulty: 'medium', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
+  {
+    gridSize: 6, difficulty: 'medium',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 2 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'ROW_EXACT_DARK', params: { n: 2 } },
+    ],
+    minLightRatio: 0.38, maxLightRatio: 0.62,
+  },
+  {
+    gridSize: 7, difficulty: 'medium',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'CONNECT_DARK' },
+      { id: 'NO_2X2_DARK' },
+      { id: 'NO_PATTERN_DARK', params: { patternName: 'L_TROMINO' } },
+    ],
+    minLightRatio: 0.38, maxLightRatio: 0.62,
+  },
+  {
+    gridSize: 6, difficulty: 'medium',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 3 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'NO_2X2_LIGHT' },
+    ],
+    minLightRatio: 0.40, maxLightRatio: 0.60,
+  },
   // ── Hard ──────────────────────────────────────────────────────────────────
-  { gridSize: 7, difficulty: 'hard', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-  { gridSize: 7, difficulty: 'hard', rules: [{ id: 'CONNECT_LIGHT' }, { id: 'CONNECT_DARK' }, { id: 'NO_2X2_DARK' }], minLightRatio: 0.35, maxLightRatio: 0.65 },
-
+  {
+    gridSize: 7, difficulty: 'hard',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 2 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'NURIBOU_STRIPES' },
+    ],
+    minLightRatio: 0.40, maxLightRatio: 0.60,
+  },
+  {
+    gridSize: 7, difficulty: 'hard',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'CONNECT_DARK' },
+      { id: 'NO_2X2_DARK' },
+      { id: 'NO_2X2_LIGHT' },
+      { id: 'NO_PATTERN_DARK', params: { patternName: 'T_TETROMINO' } },
+    ],
+    minLightRatio: 0.38, maxLightRatio: 0.62,
+  },
+  {
+    gridSize: 7, difficulty: 'hard',
+    rules: [
+      { id: 'CONNECT_LIGHT' },
+      { id: 'DARK_REGION_SIZE', params: { n: 3 } },
+      { id: 'NO_2X2_DARK' },
+      { id: 'SYMMETRY_180' },
+    ],
+    minLightRatio: 0.40, maxLightRatio: 0.60,
+  },
 ];
 
 
@@ -99,7 +174,7 @@ export function generateLumizlePuzzle(seed, difficulty = 'medium') {
     rules: cfg.rules,
     minLightRatio: cfg.minLightRatio,
     maxLightRatio: cfg.maxLightRatio,
-    clueRatio: difficulty === 'easy' ? 0.40 : difficulty === 'hard' ? 0.28 : 0.33,
+    clueRatio: difficulty === 'easy' ? 0.32 : difficulty === 'hard' ? 0.17 : 0.22,
   });
 }
 
@@ -117,6 +192,6 @@ export function generateDailyLumizle(dateKey) {
     rules: cfg.rules,
     minLightRatio: cfg.minLightRatio,
     maxLightRatio: cfg.maxLightRatio,
-    clueRatio: cfg.difficulty === 'easy' ? 0.40 : cfg.difficulty === 'hard' ? 0.28 : 0.33,
+    clueRatio: cfg.difficulty === 'easy' ? 0.32 : cfg.difficulty === 'hard' ? 0.17 : 0.22,
   });
 }

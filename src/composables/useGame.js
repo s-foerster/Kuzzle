@@ -493,6 +493,8 @@ export function useGame() {
     isConstraintComplete,
     getZoneName,
     togglePause,
+    getLevelStats,
+    saveLevelStats,
 
     // Constantes
     CELL_EMPTY,

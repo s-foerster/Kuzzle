@@ -5,47 +5,61 @@
     "puzzle": {
       "initialGrid": [
         [
-          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
           2,
-          1,
-          1,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
           0
         ],
         [
           2,
           0,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
           0,
-          2,
-          0,
-          2
-        ],
-        [
-          1,
-          0,
-          2,
           0,
           1
         ],
         [
-          2,
           0,
           1,
           0,
-          2
+          1,
+          1
         ]
       ],
       "solution": [
         [
-          1,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        [
+          2,
+          2,
           2,
           1,
-          1,
+          1
+        ],
+        [
+          2,
+          2,
+          2,
+          2,
           1
         ],
         [
@@ -57,45 +71,33 @@
         ],
         [
           1,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
           1,
-          2,
-          2,
-          2,
+          1,
+          1,
           1
-        ],
-        [
-          2,
-          2,
-          1,
-          2,
-          2
         ]
       ],
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "NO_2X2_DARK"
         }
       ],
       "metadata": {
-        "seed": "lumizle_easy_1",
+        "seed": "prac_e1_v6",
         "gridSize": 5,
-        "clueCount": 17,
-        "lightCount": 15,
-        "darkCount": 10,
+        "clueCount": 8,
+        "lightCount": 14,
+        "darkCount": 11,
         "totalCells": 25,
-        "solutionTime": 3,
-        "minimizationTime": 4,
-        "generationTime": 7,
-        "isUnique": true
+        "solutionTime": 10,
+        "selectionTime": 0,
+        "generationTime": 10,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.482Z"
+    }
   },
   "easy_2": {
     "id": "easy_2",
@@ -103,74 +105,100 @@
     "puzzle": {
       "initialGrid": [
         [
-          1,
+          0,
           2,
-          1,
+          0,
+          0,
           2,
-          2
+          0
         ],
         [
+          0,
           1,
           0,
           0,
-          0,
+          2,
           0
         ],
         [
           1,
-          2,
-          1,
-          1,
-          0
-        ],
-        [
-          1,
-          1,
           0,
           0,
-          0
-        ],
-        [
-          2,
           0,
           0,
-          1,
           1
+        ],
+        [
+          1,
+          0,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
         ]
       ],
       "solution": [
         [
           1,
           2,
-          1,
-          2,
-          2
-        ],
-        [
-          1,
           2,
           2,
           2,
-          2
-        ],
-        [
-          1,
-          2,
-          1,
-          1,
-          2
+          1
         ],
         [
           1,
           1,
           2,
           2,
-          2
+          2,
+          1
         ],
         [
+          1,
           2,
           2,
           2,
+          2,
+          1
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          1
+        ],
+        [
+          1,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        [
+          1,
+          1,
+          1,
+          1,
           1,
           1
         ]
@@ -178,22 +206,27 @@
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "CONNECT_DARK"
+        },
+        {
+          "id": "NO_2X2_DARK"
         }
       ],
       "metadata": {
-        "seed": "lumizle_easy_2",
-        "gridSize": 5,
-        "clueCount": 15,
-        "lightCount": 15,
-        "darkCount": 10,
-        "totalCells": 25,
-        "solutionTime": 2,
-        "minimizationTime": 4,
-        "generationTime": 6,
-        "isUnique": true
+        "seed": "prac_e2_v6",
+        "gridSize": 6,
+        "clueCount": 10,
+        "lightCount": 18,
+        "darkCount": 18,
+        "totalCells": 36,
+        "solutionTime": 13,
+        "selectionTime": 0,
+        "generationTime": 13,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.491Z"
+    }
   },
   "easy_3": {
     "id": "easy_3",
@@ -201,74 +234,74 @@
     "puzzle": {
       "initialGrid": [
         [
+          0,
+          0,
+          0,
           1,
+          1
+        ],
+        [
+          0,
           0,
           0,
           0,
           2
         ],
         [
-          2,
-          0,
-          1,
-          0,
-          1
-        ],
-        [
-          1,
-          1,
-          2,
-          0,
-          2
-        ],
-        [
-          0,
           0,
           0,
           2,
-          1
-        ],
-        [
-          2,
-          1,
-          1,
-          1,
+          0,
           0
+        ],
+        [
+          0,
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          1
         ]
       ],
       "solution": [
         [
           1,
+          1,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
           2,
           2,
           2,
           2
         ],
         [
-          2,
-          2,
+          1,
           1,
           2,
+          1,
           1
         ],
         [
-          1,
-          1,
+          2,
+          2,
           2,
           2,
           2
         ],
         [
-          2,
-          2,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
           1,
           1,
+          2,
           1,
           1
         ]
@@ -276,22 +309,30 @@
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "NO_2X2_DARK"
+        },
+        {
+          "id": "DARK_REGION_SIZE",
+          "params": {
+            "n": 2
+          }
         }
       ],
       "metadata": {
-        "seed": "lumizle_easy_3",
+        "seed": "prac_e3_v6",
         "gridSize": 5,
-        "clueCount": 15,
-        "lightCount": 15,
-        "darkCount": 10,
+        "clueCount": 7,
+        "lightCount": 13,
+        "darkCount": 12,
         "totalCells": 25,
-        "solutionTime": 0,
-        "minimizationTime": 2,
-        "generationTime": 2,
-        "isUnique": true
+        "solutionTime": 9,
+        "selectionTime": 0,
+        "generationTime": 9,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.493Z"
+    }
   },
   "medium_1": {
     "id": "medium_1",
@@ -299,7 +340,25 @@
     "puzzle": {
       "initialGrid": [
         [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
           2,
+          0
+        ],
+        [
+          0,
           0,
           0,
           0,
@@ -308,16 +367,16 @@
           2
         ],
         [
-          1,
+          0,
+          2,
+          0,
+          0,
           2,
           2,
-          1,
-          1,
-          1,
-          1
+          0
         ],
         [
-          2,
+          0,
           0,
           0,
           0,
@@ -326,31 +385,13 @@
           2
         ],
         [
-          1,
-          2,
-          1,
-          1,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
+          0,
+          0,
+          0,
+          0,
           0,
           1,
-          2,
-          0,
-          2
-        ],
-        [
-          0,
-          1,
-          1,
-          1,
-          1,
-          0,
-          1
+          0
         ],
         [
           0,
@@ -364,8 +405,44 @@
       ],
       "solution": [
         [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          1,
           2,
           2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
           2,
           2,
           2,
@@ -377,75 +454,44 @@
           2,
           2,
           1,
+          2,
           1,
-          1,
-          1
-        ],
-        [
-          2,
-          2,
-          2,
-          2,
-          2,
-          2,
           2
         ],
         [
           1,
-          2,
-          1,
-          1,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          1,
-          1,
-          2,
-          2,
-          2
-        ],
-        [
-          2,
           1,
           1,
           1,
           1,
-          2,
-          1
-        ],
-        [
-          2,
-          2,
-          2,
-          2,
-          2,
-          2,
+          1,
           1
         ]
       ],
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "CONNECT_DARK"
+        },
+        {
+          "id": "NO_2X2_DARK"
         }
       ],
       "metadata": {
-        "seed": "lumizle_medium_1",
+        "seed": "prac_m1_v6",
         "gridSize": 7,
-        "clueCount": 29,
-        "lightCount": 31,
-        "darkCount": 18,
+        "clueCount": 10,
+        "lightCount": 26,
+        "darkCount": 23,
         "totalCells": 49,
-        "solutionTime": 2,
-        "minimizationTime": 10,
-        "generationTime": 12,
-        "isUnique": true
+        "solutionTime": 104,
+        "selectionTime": 0,
+        "generationTime": 104,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.506Z"
+    }
   },
   "medium_2": {
     "id": "medium_2",
@@ -453,153 +499,131 @@
     "puzzle": {
       "initialGrid": [
         [
-          2,
-          1,
-          2,
-          1,
           0,
-          1,
-          2
+          0,
+          0,
+          0,
+          2,
+          0
         ],
         [
           0,
           0,
           0,
-          2,
+          0,
+          0,
+          0
+        ],
+        [
           1,
           0,
+          0,
+          0,
+          2,
           0
         ],
         [
           0,
           1,
           0,
-          1,
-          1,
+          2,
           0,
-          1
+          0
         ],
         [
-          2,
-          1,
           0,
           0,
-          2,
           0,
-          1
+          0,
+          0,
+          0
         ],
         [
-          1,
-          1,
-          1,
-          0,
-          2,
-          0,
-          1
-        ],
-        [
-          1,
-          2,
-          1,
-          0,
-          1,
-          0,
-          2
-        ],
-        [
-          2,
           0,
           0,
           0,
           2,
-          1,
-          1
+          0,
+          0
         ]
       ],
       "solution": [
         [
-          2,
-          1,
-          2,
           1,
           1,
-          1,
-          2
-        ],
-        [
           2,
           2,
-          2,
-          2,
-          1,
           2,
           2
         ],
         [
-          2,
-          1,
-          2,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          2,
-          2,
-          2,
-          2,
-          1
-        ],
-        [
-          1,
           1,
           1,
           2,
           2,
-          2,
-          1
-        ],
-        [
-          1,
-          2,
-          1,
-          2,
-          1,
           2,
           2
         ],
         [
-          2,
-          2,
-          2,
-          2,
-          2,
           1,
-          1
+          1,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          2
+        ],
+        [
+          1,
+          1,
+          2,
+          2,
+          2,
+          2
         ]
       ],
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "CONNECT_DARK"
+        },
+        {
+          "id": "ROW_EXACT_DARK",
+          "params": {
+            "n": 2
+          }
         }
       ],
       "metadata": {
-        "seed": "lumizle_medium_2",
-        "gridSize": 7,
-        "clueCount": 30,
-        "lightCount": 29,
-        "darkCount": 20,
-        "totalCells": 49,
-        "solutionTime": 1,
-        "minimizationTime": 8,
-        "generationTime": 9,
-        "isUnique": true
+        "seed": "prac_m2_rowexact2",
+        "gridSize": 6,
+        "clueCount": 6,
+        "lightCount": 24,
+        "darkCount": 12,
+        "totalCells": 36,
+        "solutionTime": 3,
+        "selectionTime": 0,
+        "generationTime": 3,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.516Z"
+    }
   },
   "medium_3": {
     "id": "medium_3",
@@ -607,66 +631,66 @@
     "puzzle": {
       "initialGrid": [
         [
-          1,
-          0,
-          0,
-          0,
-          1,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          1,
-          1,
-          2,
-          0,
-          1
-        ],
-        [
           0,
           0,
           0,
           0,
           0,
           0,
-          2
-        ],
-        [
-          0,
-          1,
-          1,
-          1,
-          2,
-          0,
-          1
-        ],
-        [
-          0,
-          1,
-          2,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          0,
-          0,
-          0,
-          2,
-          1,
-          1,
           0
         ],
         [
-          1,
-          1,
-          1,
+          0,
+          2,
+          0,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
           1,
           0,
           0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          0,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
           0
         ]
       ],
@@ -677,16 +701,7 @@
           1,
           1,
           1,
-          2,
-          1
-        ],
-        [
-          2,
           1,
-          1,
-          1,
-          2,
-          2,
           1
         ],
         [
@@ -699,31 +714,40 @@
           2
         ],
         [
-          2,
           1,
           1,
           1,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          2,
           1,
           1,
-          2,
-          1
+          1,
+          2
         ],
         [
           2,
           2,
           2,
           2,
+          2,
+          2,
+          2
+        ],
+        [
           1,
           1,
-          1
+          1,
+          1,
+          1,
+          1,
+          2
+        ],
+        [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
         ],
         [
           1,
@@ -738,585 +762,26 @@
       "rules": [
         {
           "id": "CONNECT_LIGHT"
+        },
+        {
+          "id": "NO_2X2_DARK"
+        },
+        {
+          "id": "NURIBOU_STRIPES"
         }
       ],
       "metadata": {
-        "seed": "lumizle_medium_3",
+        "seed": "prac_m3_nuribou1",
         "gridSize": 7,
-        "clueCount": 29,
-        "lightCount": 21,
-        "darkCount": 28,
-        "totalCells": 49,
-        "solutionTime": 1,
-        "minimizationTime": 7,
-        "generationTime": 8,
-        "isUnique": true
-      }
-    },
-    "generatedAt": "2026-02-22T07:34:34.524Z"
-  },
-  "hard_1": {
-    "id": "hard_1",
-    "difficulty": "hard",
-    "puzzle": {
-      "initialGrid": [
-        [
-          2,
-          0,
-          0,
-          2,
-          1,
-          1,
-          0,
-          2
-        ],
-        [
-          2,
-          0,
-          1,
-          1,
-          1,
-          1,
-          0,
-          1
-        ],
-        [
-          1,
-          0,
-          2,
-          1,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          1,
-          0,
-          1,
-          2,
-          0,
-          1,
-          0,
-          2
-        ],
-        [
-          2,
-          0,
-          1,
-          1,
-          1,
-          1,
-          0,
-          1
-        ],
-        [
-          1,
-          0,
-          0,
-          2,
-          1,
-          2,
-          0,
-          2
-        ],
-        [
-          0,
-          1,
-          2,
-          0,
-          0,
-          0,
-          2,
-          2
-        ],
-        [
-          1,
-          2,
-          0,
-          2,
-          1,
-          1,
-          2,
-          2
-        ]
-      ],
-      "solution": [
-        [
-          2,
-          2,
-          2,
-          2,
-          1,
-          1,
-          2,
-          2
-        ],
-        [
-          2,
-          2,
-          1,
-          1,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
-          2,
-          2,
-          1,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          1,
-          2,
-          1,
-          2,
-          2,
-          1,
-          2,
-          2
-        ],
-        [
-          2,
-          2,
-          1,
-          1,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
-          2,
-          2,
-          2,
-          1,
-          2,
-          2,
-          2
-        ],
-        [
-          1,
-          1,
-          2,
-          2,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          1,
-          2,
-          2,
-          2,
-          1,
-          1,
-          2,
-          2
-        ]
-      ],
-      "rules": [
-        {
-          "id": "CONNECT_LIGHT"
-        }
-      ],
-      "metadata": {
-        "seed": "lumizle_hard_1",
-        "gridSize": 8,
-        "clueCount": 42,
-        "lightCount": 40,
-        "darkCount": 24,
-        "totalCells": 64,
-        "solutionTime": 2,
-        "minimizationTime": 20,
-        "generationTime": 22,
-        "isUnique": true
-      }
-    },
-    "generatedAt": "2026-02-22T07:34:34.547Z"
-  },
-  "hard_2": {
-    "id": "hard_2",
-    "difficulty": "hard",
-    "puzzle": {
-      "initialGrid": [
-        [
-          0,
-          0,
-          0,
-          0,
-          0,
-          2,
-          0,
-          2
-        ],
-        [
-          0,
-          1,
-          2,
-          1,
-          2,
-          2,
-          2,
-          1
-        ],
-        [
-          0,
-          2,
-          1,
-          1,
-          1,
-          2,
-          0,
-          2
-        ],
-        [
-          1,
-          1,
-          2,
-          2,
-          1,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          0,
-          0,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          0,
-          0,
-          0,
-          1,
-          1,
-          1,
-          0,
-          1
-        ],
-        [
-          1,
-          1,
-          0,
-          0,
-          1,
-          1,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          1,
-          0,
-          2,
-          1,
-          1,
-          2
-        ]
-      ],
-      "solution": [
-        [
-          2,
-          2,
-          2,
-          2,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          2,
-          1,
-          2,
-          1,
-          2,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          2,
-          1,
-          1,
-          1,
-          2,
-          2,
-          2
-        ],
-        [
-          1,
-          1,
-          2,
-          2,
-          1,
-          2,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          2,
-          2,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          2,
-          2,
-          2,
-          1,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
-          1,
-          2,
-          2,
-          1,
-          1,
-          2,
-          2
-        ],
-        [
-          1,
-          1,
-          1,
-          2,
-          2,
-          1,
-          1,
-          2
-        ]
-      ],
-      "rules": [
-        {
-          "id": "CONNECT_LIGHT"
-        }
-      ],
-      "metadata": {
-        "seed": "lumizle_hard_2",
-        "gridSize": 8,
-        "clueCount": 39,
-        "lightCount": 40,
-        "darkCount": 24,
-        "totalCells": 64,
-        "solutionTime": 1,
-        "minimizationTime": 20,
-        "generationTime": 21,
-        "isUnique": true
-      }
-    },
-    "generatedAt": "2026-02-22T07:34:34.568Z"
-  },
-  "hard_3": {
-    "id": "hard_3",
-    "difficulty": "hard",
-    "puzzle": {
-      "initialGrid": [
-        [
-          2,
-          2,
-          1,
-          1,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          2,
-          0,
-          0,
-          0,
-          0,
-          1,
-          2,
-          2
-        ],
-        [
-          1,
-          0,
-          1,
-          2,
-          0,
-          2,
-          1,
-          1
-        ],
-        [
-          1,
-          0,
-          1,
-          1,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
-          0,
-          0,
-          1,
-          2,
-          1,
-          0,
-          1
-        ],
-        [
-          2,
-          1,
-          0,
-          0,
-          0,
-          1,
-          0,
-          1
-        ],
-        [
-          0,
-          0,
-          1,
-          1,
-          0,
-          0,
-          0,
-          2
-        ],
-        [
-          1,
-          0,
-          0,
-          0,
-          0,
-          1,
-          1,
-          1
-        ]
-      ],
-      "solution": [
-        [
-          2,
-          2,
-          1,
-          1,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          2,
-          2,
-          2,
-          2,
-          2,
-          1,
-          2,
-          2
-        ],
-        [
-          1,
-          2,
-          1,
-          2,
-          2,
-          2,
-          1,
-          1
-        ],
-        [
-          1,
-          2,
-          1,
-          1,
-          1,
-          1,
-          2,
-          1
-        ],
-        [
-          1,
-          2,
-          2,
-          1,
-          2,
-          1,
-          2,
-          1
-        ],
-        [
-          2,
-          1,
-          2,
-          2,
-          2,
-          1,
-          2,
-          1
-        ],
-        [
-          2,
-          2,
-          1,
-          1,
-          2,
-          2,
-          2,
-          2
-        ],
-        [
-          1,
-          2,
-          2,
-          2,
-          2,
-          1,
-          1,
-          1
-        ]
-      ],
-      "rules": [
-        {
-          "id": "CONNECT_LIGHT"
-        }
-      ],
-      "metadata": {
-        "seed": "lumizle_hard_3",
-        "gridSize": 8,
-        "clueCount": 38,
-        "lightCount": 38,
+        "clueCount": 8,
+        "lightCount": 23,
         "darkCount": 26,
-        "totalCells": 64,
-        "solutionTime": 1,
-        "minimizationTime": 18,
-        "generationTime": 19,
-        "isUnique": true
+        "totalCells": 49,
+        "solutionTime": 6,
+        "selectionTime": 0,
+        "generationTime": 6,
+        "isUnique": false
       }
-    },
-    "generatedAt": "2026-02-22T07:34:34.589Z"
+    }
   }
 }

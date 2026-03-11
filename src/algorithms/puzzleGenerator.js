@@ -429,9 +429,9 @@ export function generatePuzzleHeartsFirst(seed, options = {}) {
         }
       }
       
-      // Rejeter si une zone est < 4 cellules (minimum viable)
+      // Rejeter si une zone est < 3 cellules (minimum viable)
       const minZoneSize = Math.min(...zoneSizes);
-      if (minZoneSize < 4) {
+      if (minZoneSize < 3) {
         console.warn(`Tentative ${totalAttempts}: zone trop petite (${minZoneSize}), réessai`);
         
         const perturbation = totalAttempts * 5381;
@@ -465,11 +465,11 @@ export function generatePuzzleHeartsFirst(seed, options = {}) {
           continue;
         }
       } else {
-        const smallZonesCount = zoneSizes.filter(size => size === gridConfig.smallZoneSize).length;
+        const smallZonesCount = zoneSizes.filter(size => size <= gridConfig.smallZoneSize).length;
 
         if (smallZonesCount < gridConfig.minSmallZones) {
           console.warn(
-            `Tentative ${totalAttempts}: seulement ${smallZonesCount} zones de taille ${gridConfig.smallZoneSize}, minimum ${gridConfig.minSmallZones}`
+            `Tentative ${totalAttempts}: seulement ${smallZonesCount} zones de taille ≤${gridConfig.smallZoneSize}, minimum ${gridConfig.minSmallZones}`
           );
 
           const perturbation = totalAttempts * 4211;

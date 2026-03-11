@@ -95,7 +95,9 @@
               class="cal-done-badge"
               >✓</span
             >
-            <span v-else-if="isDayLocked(day.dateKey)" class="cal-lock-badge">🔒</span>
+            <span v-else-if="isDayLocked(day.dateKey)" class="cal-lock-badge"
+              >🔒</span
+            >
           </button>
         </div>
         <button
@@ -154,7 +156,8 @@
                 'cal-picker-cell--active': cell.dateKey === currentArchiveDate,
                 'cal-picker-cell--done':
                   cell.dateKey && completedLevels.includes(cell.dateKey),
-                'cal-picker-cell--locked': cell.dateKey && isDayLocked(cell.dateKey),
+                'cal-picker-cell--locked':
+                  cell.dateKey && isDayLocked(cell.dateKey),
               }"
               :disabled="!cell.available"
               @click="cell.available && loadArchiveDateKey(cell.dateKey)"
@@ -166,9 +169,12 @@
                 >✓</span
               >
               <span
-                v-else-if="cell.dateKey && isDayLocked(cell.dateKey) && cell.available"
+                v-else-if="
+                  cell.dateKey && isDayLocked(cell.dateKey) && cell.available
+                "
                 class="cal-picker-lock"
-              >🔒</span>
+                >🔒</span
+              >
             </button>
           </div>
         </div>
@@ -183,13 +189,23 @@
             @click.self="showPremiumPaywall = false"
           >
             <div class="paywall-modal" role="dialog" aria-modal="true">
-              <button class="paywall-close" @click="showPremiumPaywall = false" aria-label="Fermer">×</button>
+              <button
+                class="paywall-close"
+                @click="showPremiumPaywall = false"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
               <div class="paywall-icon">⭐</div>
               <h2 class="paywall-title">Contenu Premium</h2>
               <p class="paywall-date">Puzzle du {{ paywallDateLabel }}</p>
               <p class="paywall-desc">
-                L’archive complète est réservée aux membres <strong>Pass Premium</strong>.
-                Les non-membres ont accès aux <strong>3 derniers jours</strong> (aujourd’hui + 2 jours).
+                L’archive complète est réservée aux membres <strong
+                  >Pass Premium</strong
+                >. Les non-membres ont accès aux <strong
+                  >3 derniers jours</strong
+                >
+                (aujourd’hui + 2 jours).
               </p>
               <ul class="paywall-perks">
                 <li>✨ Accès à tous les puzzles passés</li>
@@ -197,15 +213,23 @@
                 <li>🎨 Thèmes exclusifs</li>
                 <li>💛 Soutenir le développement de Kuzzle</li>
               </ul>
-              <p v-if="paywallError" class="paywall-error">{{ paywallError }}</p>
+              <p v-if="paywallError" class="paywall-error">
+                {{ paywallError }}
+              </p>
               <button
                 class="btn-paywall-cta"
                 :disabled="paywallLoading"
                 @click="handlePaywallCheckout"
               >
-                {{ paywallLoading ? 'Chargement…' : 'Obtenir le Pass Premium — 5 €/mois' }}
+                {{
+                  paywallLoading
+                    ? "Chargement…"
+                    : "Obtenir le Pass Premium — 5 €/mois"
+                }}
               </button>
-              <p class="paywall-hint">Annulation à tout moment depuis le portail.</p>
+              <p class="paywall-hint">
+                Annulation à tout moment depuis le portail.
+              </p>
             </div>
           </div>
         </Transition>
@@ -272,7 +296,11 @@ import puzzleCacheData from "../../puzzle-cache.json";
 const router = useRouter();
 const navStore = useNavigationStore();
 const authStore = useAuthStore();
-const { startCheckout, loading: paywallLoading, error: paywallError } = useSubscription();
+const {
+  startCheckout,
+  loading: paywallLoading,
+  error: paywallError,
+} = useSubscription();
 
 // ── Composable jeu ───────────────────────────────────────────────────────────
 const {
@@ -299,6 +327,8 @@ const {
   checkErrors,
   fillWithSolution,
   togglePause,
+  getLevelStats,
+  saveLevelStats,
 } = useGame();
 
 // ── Mode practice ────────────────────────────────────────────────────────────
@@ -453,12 +483,12 @@ function isDayLocked(dateKey) {
 
 // ── Modal Paywall ─────────────────────────────────────────────────────────────
 const showPremiumPaywall = ref(false);
-const paywallDateLabel   = ref('');
+const paywallDateLabel = ref("");
 
 async function handlePaywallCheckout() {
   if (!authStore.isLoggedIn) {
     // Rediriger vers le profil pour se connecter
-    router.push('/profil');
+    router.push("/profil");
     return;
   }
   await startCheckout();
@@ -501,8 +531,11 @@ function loadArchiveDay(day) {
   // ── Restriction Premium ───────────────────────────────────────────
   if (isDayLocked(day.dateKey)) {
     // Afficher le modal paywall au lieu de charger le puzzle
-    paywallDateLabel.value = dayDate.toLocaleDateString('fr-FR', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    paywallDateLabel.value = dayDate.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
     showPremiumPaywall.value = true;
     return;
@@ -525,10 +558,8 @@ function loadArchiveDay(day) {
 }
 
 // ── Niveaux complétés (Hearts) ───────────────────────────────────────────────
-const LS_KEY = 'hearts-completed-levels';
-const completedLevels = ref(
-  JSON.parse(localStorage.getItem(LS_KEY) || '[]'),
-);
+const LS_KEY = "hearts-completed-levels";
+const completedLevels = ref(JSON.parse(localStorage.getItem(LS_KEY) || "[]"));
 
 /**
  * Fusionne les niveaux complétés depuis Supabase avec ceux du localStorage.
@@ -538,34 +569,36 @@ const completedLevels = ref(
 async function syncCompletedFromSupabase() {
   if (!authStore.isLoggedIn) return;
   try {
-    const { supabase } = await import('../lib/supabase.js');
+    const { supabase } = await import("../lib/supabase.js");
     if (!supabase) return;
 
     const { data, error: fetchError } = await supabase
-      .from('game_results')
-      .select('puzzle_date')
-      .eq('user_id', authStore.user.id)
-      .eq('game_type', 'hearts')
-      .eq('completed', true);
+      .from("game_results")
+      .select("puzzle_date")
+      .eq("user_id", authStore.user.id)
+      .eq("game_type", "hearts")
+      .eq("completed", true);
 
     if (fetchError) {
-      console.error('❌ [GameView] Erreur sync niveaux:', fetchError.message);
+      console.error("❌ [GameView] Erreur sync niveaux:", fetchError.message);
       return;
     }
 
-    const remoteIds = (data || []).map(r => r.puzzle_date);
-    const local = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    const remoteIds = (data || []).map((r) => r.puzzle_date);
+    const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
     // Union sans doublons
     const merged = [...new Set([...local, ...remoteIds])];
 
     completedLevels.value = merged;
     localStorage.setItem(LS_KEY, JSON.stringify(merged));
-    console.log(`✅ [GameView] ${merged.length} niveaux complétés synchronisés`);
+    console.log(
+      `✅ [GameView] ${merged.length} niveaux complétés synchronisés`,
+    );
 
     // Re-déclencher le check pour le puzzle actuellement affiché
     checkAndFillIfCompleted();
   } catch (e) {
-    console.error('❌ [GameView] Exception sync niveaux:', e);
+    console.error("❌ [GameView] Exception sync niveaux:", e);
   }
 }
 
@@ -586,10 +619,45 @@ const isCurrentLevelCompleted = computed(
     completedLevels.value.includes(currentLevelId.value),
 );
 
-function checkAndFillIfCompleted() {
-  nextTick(() => {
-    if (isCurrentLevelCompleted.value && !isWon.value) fillWithSolution();
-  });
+async function checkAndFillIfCompleted() {
+  await nextTick();
+  if (!isCurrentLevelCompleted.value || isWon.value) return;
+
+  fillWithSolution();
+
+  // Si les stats locales sont absentes (niveau complété sur un autre appareil ou avant la
+  // sauvegarde locale), tenter de les récupérer depuis Supabase pour les afficher.
+  if (
+    !getLevelStats(currentLevelId.value) &&
+    authStore.isLoggedIn &&
+    currentLevelId.value &&
+    !currentDate.value.startsWith("practice_")
+  ) {
+    try {
+      const { supabase } = await import("../lib/supabase.js");
+      if (supabase) {
+        const { data } = await supabase
+          .from("game_results")
+          .select("time_seconds, verify_count")
+          .eq("user_id", authStore.user.id)
+          .eq("game_type", "hearts")
+          .eq("puzzle_date", currentLevelId.value)
+          .single();
+        if (data && data.time_seconds != null) {
+          elapsedTime.value = data.time_seconds;
+          verifyCount.value = data.verify_count || 0;
+          // Mise en cache local pour les prochaines fois
+          saveLevelStats(
+            currentLevelId.value,
+            data.time_seconds,
+            data.verify_count || 0,
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback silencieux
+    }
+  }
 }
 watch(puzzle, (p) => {
   if (p) checkAndFillIfCompleted();
@@ -602,8 +670,8 @@ watch(isWon, async (won) => {
 
   // Construire l'ID du niveau
   let completedId;
-  if (currentDate.value.startsWith('practice_')) {
-    completedId = currentDate.value.replace('practice_', '');
+  if (currentDate.value.startsWith("practice_")) {
+    completedId = currentDate.value.replace("practice_", "");
   } else if (/^\d{8}$/.test(currentDate.value)) {
     completedId = `${currentDate.value.slice(0, 4)}-${currentDate.value.slice(4, 6)}-${currentDate.value.slice(6, 8)}`;
   } else {
@@ -616,30 +684,38 @@ watch(isWon, async (won) => {
     localStorage.setItem(LS_KEY, JSON.stringify(completedLevels.value));
   }
 
-  // Supabase (si connecté et puzzle quotidien — pas les practice)
-  if (authStore.isLoggedIn && !currentDate.value.startsWith('practice_')) {
+  // Supabase (si connecté, puzzle quotidien, ET timer démarré = vraie victoire et non rechargement
+  // d'un niveau déjà complété via fillWithSolution, ce qui évite d'écraser les stats avec des zéros)
+  if (
+    authStore.isLoggedIn &&
+    !currentDate.value.startsWith("practice_") &&
+    isTimerStarted.value
+  ) {
     try {
-      const { supabase } = await import('../lib/supabase.js');
+      const { supabase } = await import("../lib/supabase.js");
       if (supabase) {
-        const { error: saveError } = await supabase.from('game_results').upsert(
+        const { error: saveError } = await supabase.from("game_results").upsert(
           {
             user_id: authStore.user.id,
-            game_type: 'hearts',
+            game_type: "hearts",
             puzzle_date: completedId,
             completed: true,
             time_seconds: elapsedTime.value,
             verify_count: verifyCount.value,
           },
-          { onConflict: 'user_id,game_type,puzzle_date' },
+          { onConflict: "user_id,game_type,puzzle_date" },
         );
         if (saveError) {
-          console.error('❌ [GameView] Erreur sauvegarde Supabase:', saveError.message || saveError);
+          console.error(
+            "❌ [GameView] Erreur sauvegarde Supabase:",
+            saveError.message || saveError,
+          );
         } else {
-          console.log('✅ [GameView] Résultat sauvegardé dans Supabase');
+          console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
         }
       }
     } catch (e) {
-      console.error('❌ [GameView] Supabase save exception:', e);
+      console.error("❌ [GameView] Supabase save exception:", e);
     }
   }
 });
@@ -657,7 +733,7 @@ watch(
 // ── Init ─────────────────────────────────────────────────────────────────────
 onMounted(async () => {
   const pending = navStore.consumePendingPuzzle();
-  if (pending?.type === 'practice') {
+  if (pending?.type === "practice") {
     isPracticeMode.value = true;
     initPracticePuzzle(pending.data);
   } else {
@@ -669,7 +745,6 @@ onMounted(async () => {
   // Sync Supabase en parallèle dès le démarrage (sans bloquer le puzzle)
   syncCompletedFromSupabase();
 });
-
 </script>
 
 <style scoped>
@@ -1166,7 +1241,9 @@ onMounted(async () => {
 .cal-day--locked .cal-num {
   opacity: 0.38;
 }
-.cal-day--locked { cursor: pointer; }
+.cal-day--locked {
+  cursor: pointer;
+}
 .cal-lock-badge {
   font-size: 0.55rem;
   line-height: 1;
@@ -1214,8 +1291,14 @@ onMounted(async () => {
   animation: paywall-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 @keyframes paywall-pop {
-  from { opacity: 0; transform: scale(0.9) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .paywall-close {
   position: absolute;
@@ -1229,9 +1312,14 @@ onMounted(async () => {
   cursor: pointer;
   transition: color 0.15s;
 }
-.paywall-close:hover { color: var(--color-text); }
+.paywall-close:hover {
+  color: var(--color-text);
+}
 
-.paywall-icon  { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.paywall-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
 .paywall-title {
   font-size: 1.3rem;
   font-weight: 900;
@@ -1282,7 +1370,10 @@ onMounted(async () => {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55);
 }
-.btn-paywall-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-paywall-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .paywall-error {
   font-size: 0.82rem;
   color: var(--color-error, #dc2626);

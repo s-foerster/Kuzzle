@@ -489,16 +489,433 @@ const NO_3_IN_A_ROW_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
+// Helpers — rotations de patterns pour NO_PATTERN_*
+// ---------------------------------------------------------------------------
+
+function rotate90(pattern) {
+  const rotated = pattern.map(([r, c]) => [c, -r]);
+  const minR = Math.min(...rotated.map(([r]) => r));
+  const minC = Math.min(...rotated.map(([, c]) => c));
+  return rotated.map(([r, c]) => [r - minR, c - minC]);
+}
+
+function getAllRotationVariants(basePattern) {
+  const variants = [];
+  const seen = new Set();
+  let p = basePattern;
+  for (let i = 0; i < 4; i++) {
+    const key = p.map(pt => pt.join(',')).sort().join(';');
+    if (!seen.has(key)) { seen.add(key); variants.push(p); }
+    p = rotate90(p);
+  }
+  return variants;
+}
+
+// Patterns disponibles (toutes rotations incluses)
+export const NAMED_PATTERNS = {
+  L_TROMINO: getAllRotationVariants([[0, 0], [1, 0], [1, 1]]),
+  T_TETROMINO: getAllRotationVariants([[0, 0], [0, 1], [0, 2], [1, 1]]),
+  S_TETROMINO: getAllRotationVariants([[0, 1], [0, 2], [1, 0], [1, 1]]),
+  PLUS: [[[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]]],
+};
+
+function gridHasPattern(grid, size, cellVal, patternVariants) {
+  for (const pattern of patternVariants) {
+    const maxR = Math.max(...pattern.map(([r]) => r));
+    const maxC = Math.max(...pattern.map(([, c]) => c));
+    for (let dr = 0; dr + maxR < size; dr++) {
+      for (let dc = 0; dc + maxC < size; dc++) {
+        if (pattern.every(([r, c]) => grid[dr + r][dc + c] === cellVal)) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function getPatternViolations(grid, size, cellVal, patternVariants) {
+  const violating = new Set();
+  for (const pattern of patternVariants) {
+    const maxR = Math.max(...pattern.map(([r]) => r));
+    const maxC = Math.max(...pattern.map(([, c]) => c));
+    for (let dr = 0; dr + maxR < size; dr++) {
+      for (let dc = 0; dc + maxC < size; dc++) {
+        if (pattern.every(([r, c]) => grid[dr + r][dc + c] === cellVal)) {
+          for (const [r, c] of pattern) violating.add(`${dr + r},${dc + c}`);
+        }
+      }
+    }
+  }
+  return violating;
+}
+
+// ---------------------------------------------------------------------------
+// Règle : LIGHT_REGION_SIZE — chaque région claire a exactement n cellules
+// ---------------------------------------------------------------------------
+const LIGHT_REGION_SIZE = {
+  id: 'LIGHT_REGION_SIZE',
+  name: 'Taille des régions claires',
+  description: 'Chaque groupe de cellules claires doit contenir exactement {n} cellules',
+  icon: '🔳',
+  previewSolution: [[1, 2, 1], [1, 2, 1], [1, 1, 1]],
+
+  check(grid, size, params = { n: 2 }) {
+    return getComponents(grid, size, [CELL_LIGHT]).every(c => c.length === params.n);
+  },
+  checkPartial(grid, size, params = { n: 2 }) {
+    return getComponents(grid, size, [CELL_LIGHT]).every(c => c.length <= params.n);
+  },
+  getViolatingCells(grid, size, params = { n: 2 }) {
+    const v = new Set();
+    for (const comp of getComponents(grid, size, [CELL_LIGHT])) {
+      if (comp.length > params.n) for (const [r, c] of comp) v.add(`${r},${c}`);
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : DARK_AREA_EXACT — total de cellules sombres = exactement n
+// ---------------------------------------------------------------------------
+const DARK_AREA_EXACT = {
+  id: 'DARK_AREA_EXACT',
+  name: 'Total de cellules sombres exact',
+  description: 'Le nombre total de cellules sombres doit être exactement {n}',
+  icon: '🔢',
+  previewSolution: [[1, 2, 1], [2, 2, 2], [1, 2, 1]],
+
+  check(grid, size, params = { n: 4 }) {
+    return grid.flat().filter(v => v === CELL_DARK).length === params.n;
+  },
+  checkPartial(grid, size, params = { n: 4 }) {
+    const flat = grid.flat();
+    const dark = flat.filter(v => v === CELL_DARK).length;
+    const unknown = flat.filter(v => v === CELL_UNKNOWN).length;
+    return dark <= params.n && dark + unknown >= params.n;
+  },
+  getViolatingCells(grid, size, params = { n: 4 }) {
+    const dark = grid.flat().filter(v => v === CELL_DARK).length;
+    if (dark === params.n) return new Set();
+    const v = new Set();
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (grid[r][c] === CELL_DARK) v.add(`${r},${c}`);
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : LIGHT_AREA_EXACT — total de cellules claires = exactement n
+// ---------------------------------------------------------------------------
+const LIGHT_AREA_EXACT = {
+  id: 'LIGHT_AREA_EXACT',
+  name: 'Total de cellules claires exact',
+  description: 'Le nombre total de cellules claires doit être exactement {n}',
+  icon: '🔡',
+  previewSolution: [[2, 1, 2], [1, 1, 1], [2, 1, 2]],
+
+  check(grid, size, params = { n: 4 }) {
+    return grid.flat().filter(v => v === CELL_LIGHT).length === params.n;
+  },
+  checkPartial(grid, size, params = { n: 4 }) {
+    const flat = grid.flat();
+    const light = flat.filter(v => v === CELL_LIGHT).length;
+    const unknown = flat.filter(v => v === CELL_UNKNOWN).length;
+    return light <= params.n && light + unknown >= params.n;
+  },
+  getViolatingCells(grid, size, params = { n: 4 }) {
+    const light = grid.flat().filter(v => v === CELL_LIGHT).length;
+    if (light === params.n) return new Set();
+    const v = new Set();
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (grid[r][c] === CELL_LIGHT) v.add(`${r},${c}`);
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : ROW_EXACT_DARK — exactement n cellules sombres par ligne
+// ---------------------------------------------------------------------------
+const ROW_EXACT_DARK = {
+  id: 'ROW_EXACT_DARK',
+  name: 'Exactement {n} sombre(s) par ligne',
+  description: 'Chaque ligne doit contenir exactement {n} cellule(s) sombre(s)',
+  icon: '↔️',
+  previewSolution: [[2, 1, 2], [1, 2, 1], [2, 1, 2]],
+
+  check(grid, size, params = { n: 1 }) {
+    return grid.every(row => row.filter(v => v === CELL_DARK).length === params.n);
+  },
+  checkPartial(grid, size, params = { n: 1 }) {
+    return grid.every(row => {
+      const dark = row.filter(v => v === CELL_DARK).length;
+      const unknown = row.filter(v => v === CELL_UNKNOWN).length;
+      return dark <= params.n && dark + unknown >= params.n;
+    });
+  },
+  getViolatingCells(grid, size, params = { n: 1 }) {
+    const v = new Set();
+    for (let r = 0; r < size; r++) {
+      const dark = grid[r].filter(x => x === CELL_DARK).length;
+      const unknown = grid[r].filter(x => x === CELL_UNKNOWN).length;
+      if (dark > params.n || (unknown === 0 && dark !== params.n)) {
+        for (let c = 0; c < size; c++)
+          if (grid[r][c] === CELL_DARK) v.add(`${r},${c}`);
+      }
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : ROW_EXACT_LIGHT — exactement n cellules claires par ligne
+// ---------------------------------------------------------------------------
+const ROW_EXACT_LIGHT = {
+  id: 'ROW_EXACT_LIGHT',
+  name: 'Exactement {n} clair(es) par ligne',
+  description: 'Chaque ligne doit contenir exactement {n} cellule(s) claire(s)',
+  icon: '↔',
+  previewSolution: [[1, 2, 1], [2, 1, 2], [1, 2, 1]],
+
+  check(grid, size, params = { n: 1 }) {
+    return grid.every(row => row.filter(v => v === CELL_LIGHT).length === params.n);
+  },
+  checkPartial(grid, size, params = { n: 1 }) {
+    return grid.every(row => {
+      const light = row.filter(v => v === CELL_LIGHT).length;
+      const unknown = row.filter(v => v === CELL_UNKNOWN).length;
+      return light <= params.n && light + unknown >= params.n;
+    });
+  },
+  getViolatingCells(grid, size, params = { n: 1 }) {
+    const v = new Set();
+    for (let r = 0; r < size; r++) {
+      const light = grid[r].filter(x => x === CELL_LIGHT).length;
+      const unknown = grid[r].filter(x => x === CELL_UNKNOWN).length;
+      if (light > params.n || (unknown === 0 && light !== params.n)) {
+        for (let c = 0; c < size; c++)
+          if (grid[r][c] === CELL_LIGHT) v.add(`${r},${c}`);
+      }
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : COL_EXACT_DARK — exactement n cellules sombres par colonne
+// ---------------------------------------------------------------------------
+const COL_EXACT_DARK = {
+  id: 'COL_EXACT_DARK',
+  name: 'Exactement {n} sombre(s) par colonne',
+  description: 'Chaque colonne doit contenir exactement {n} cellule(s) sombre(s)',
+  icon: '↕️',
+  previewSolution: [[1, 2, 1], [2, 1, 2], [1, 2, 1]],
+
+  check(grid, size, params = { n: 1 }) {
+    for (let c = 0; c < size; c++) {
+      if (grid.filter((_, r) => grid[r][c] === CELL_DARK).length !== params.n) return false;
+    }
+    return true;
+  },
+  checkPartial(grid, size, params = { n: 1 }) {
+    for (let c = 0; c < size; c++) {
+      const dark = grid.reduce((s, row) => s + (row[c] === CELL_DARK ? 1 : 0), 0);
+      const unknown = grid.reduce((s, row) => s + (row[c] === CELL_UNKNOWN ? 1 : 0), 0);
+      if (dark > params.n || dark + unknown < params.n) return false;
+    }
+    return true;
+  },
+  getViolatingCells(grid, size, params = { n: 1 }) {
+    const v = new Set();
+    for (let c = 0; c < size; c++) {
+      const dark = grid.reduce((s, row) => s + (row[c] === CELL_DARK ? 1 : 0), 0);
+      const unknown = grid.reduce((s, row) => s + (row[c] === CELL_UNKNOWN ? 1 : 0), 0);
+      if (dark > params.n || (unknown === 0 && dark !== params.n)) {
+        for (let r = 0; r < size; r++)
+          if (grid[r][c] === CELL_DARK) v.add(`${r},${c}`);
+      }
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : COL_EXACT_LIGHT — exactement n cellules claires par colonne
+// ---------------------------------------------------------------------------
+const COL_EXACT_LIGHT = {
+  id: 'COL_EXACT_LIGHT',
+  name: 'Exactement {n} clair(es) par colonne',
+  description: 'Chaque colonne doit contenir exactement {n} cellule(s) claire(s)',
+  icon: '↕',
+  previewSolution: [[2, 1, 2], [1, 2, 1], [2, 1, 2]],
+
+  check(grid, size, params = { n: 1 }) {
+    for (let c = 0; c < size; c++) {
+      if (grid.reduce((s, row) => s + (row[c] === CELL_LIGHT ? 1 : 0), 0) !== params.n) return false;
+    }
+    return true;
+  },
+  checkPartial(grid, size, params = { n: 1 }) {
+    for (let c = 0; c < size; c++) {
+      const light = grid.reduce((s, row) => s + (row[c] === CELL_LIGHT ? 1 : 0), 0);
+      const unknown = grid.reduce((s, row) => s + (row[c] === CELL_UNKNOWN ? 1 : 0), 0);
+      if (light > params.n || light + unknown < params.n) return false;
+    }
+    return true;
+  },
+  getViolatingCells(grid, size, params = { n: 1 }) {
+    const v = new Set();
+    for (let c = 0; c < size; c++) {
+      const light = grid.reduce((s, row) => s + (row[c] === CELL_LIGHT ? 1 : 0), 0);
+      const unknown = grid.reduce((s, row) => s + (row[c] === CELL_UNKNOWN ? 1 : 0), 0);
+      if (light > params.n || (unknown === 0 && light !== params.n)) {
+        for (let r = 0; r < size; r++)
+          if (grid[r][c] === CELL_LIGHT) v.add(`${r},${c}`);
+      }
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : SYMMETRY_180 — symétrie rotationnelle 180°
+// ---------------------------------------------------------------------------
+const SYMMETRY_180 = {
+  id: 'SYMMETRY_180',
+  name: 'Symétrie 180°',
+  description: 'La grille doit être symétrique par rotation de 180°',
+  icon: '🔄',
+  previewSolution: [[1, 2, 1], [2, 1, 2], [1, 2, 1]],
+
+  check(grid, size) {
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (grid[r][c] !== grid[size - 1 - r][size - 1 - c]) return false;
+    return true;
+  },
+  checkPartial(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const a = grid[r][c], b = grid[size - 1 - r][size - 1 - c];
+        if (a !== CELL_UNKNOWN && b !== CELL_UNKNOWN && a !== b) return false;
+      }
+    }
+    return true;
+  },
+  getViolatingCells(grid, size) {
+    const v = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const a = grid[r][c], b = grid[size - 1 - r][size - 1 - c];
+        if (a !== CELL_UNKNOWN && b !== CELL_UNKNOWN && a !== b) {
+          v.add(`${r},${c}`); v.add(`${size - 1 - r},${size - 1 - c}`);
+        }
+      }
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NURIBOU_STRIPES — les îles sombres sont des bandes rectilignes
+// ---------------------------------------------------------------------------
+const NURIBOU_STRIPES = {
+  id: 'NURIBOU_STRIPES',
+  name: 'Bandes sombres',
+  description: 'Chaque groupe de cellules sombres doit former une bande rectiligne (1×N ou N×1)',
+  icon: '▬',
+  previewSolution: [[1, 1, 2], [2, 2, 2], [1, 1, 2]],
+
+  _isStripe(comp) {
+    const rows = new Set(comp.map(([r]) => r));
+    const cols = new Set(comp.map(([, c]) => c));
+    return rows.size === 1 || cols.size === 1;
+  },
+  check(grid, size) {
+    return getComponents(grid, size, [CELL_DARK]).every(c => this._isStripe(c));
+  },
+  checkPartial(grid, size) {
+    return getComponents(grid, size, [CELL_DARK]).every(c => this._isStripe(c));
+  },
+  getViolatingCells(grid, size) {
+    const v = new Set();
+    for (const comp of getComponents(grid, size, [CELL_DARK])) {
+      if (!this._isStripe(comp)) for (const [r, c] of comp) v.add(`${r},${c}`);
+    }
+    return v;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NO_PATTERN_DARK — pattern sombre interdit (L, T, S, PLUS)
+// ---------------------------------------------------------------------------
+const NO_PATTERN_DARK = {
+  id: 'NO_PATTERN_DARK',
+  name: 'Motif sombre interdit',
+  description: 'Le motif sombre {patternName} est interdit',
+  icon: '🚫',
+  previewSolution: [[1, 2, 1], [2, 1, 2], [1, 2, 1]],
+
+  _getVariants(params) {
+    return NAMED_PATTERNS[params?.patternName] ?? NAMED_PATTERNS.L_TROMINO;
+  },
+  check(grid, size, params) {
+    return !gridHasPattern(grid, size, CELL_DARK, this._getVariants(params));
+  },
+  checkPartial(grid, size, params) {
+    return !gridHasPattern(grid, size, CELL_DARK, this._getVariants(params));
+  },
+  getViolatingCells(grid, size, params) {
+    return getPatternViolations(grid, size, CELL_DARK, this._getVariants(params));
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NO_PATTERN_LIGHT — pattern clair interdit (L, T, S, PLUS)
+// ---------------------------------------------------------------------------
+const NO_PATTERN_LIGHT = {
+  id: 'NO_PATTERN_LIGHT',
+  name: 'Motif clair interdit',
+  description: 'Le motif clair {patternName} est interdit',
+  icon: '🚷',
+  previewSolution: [[2, 1, 2], [1, 2, 1], [2, 1, 2]],
+
+  _getVariants(params) {
+    return NAMED_PATTERNS[params?.patternName] ?? NAMED_PATTERNS.L_TROMINO;
+  },
+  check(grid, size, params) {
+    return !gridHasPattern(grid, size, CELL_LIGHT, this._getVariants(params));
+  },
+  checkPartial(grid, size, params) {
+    return !gridHasPattern(grid, size, CELL_LIGHT, this._getVariants(params));
+  },
+  getViolatingCells(grid, size, params) {
+    return getPatternViolations(grid, size, CELL_LIGHT, this._getVariants(params));
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Registre des règles
 // ---------------------------------------------------------------------------
 export const ALL_RULES = {
   CONNECT_LIGHT,
   CONNECT_DARK,
   DARK_REGION_SIZE,
+  LIGHT_REGION_SIZE,
+  DARK_AREA_EXACT,
+  LIGHT_AREA_EXACT,
   NO_2X2_DARK,
   NO_2X2_LIGHT,
   NO_3_IN_A_ROW_DARK,
   NO_3_IN_A_ROW_LIGHT,
+  ROW_EXACT_DARK,
+  ROW_EXACT_LIGHT,
+  COL_EXACT_DARK,
+  COL_EXACT_LIGHT,
+  SYMMETRY_180,
+  NURIBOU_STRIPES,
+  NO_PATTERN_DARK,
+  NO_PATTERN_LIGHT,
 };
 
 export function getRuleById(id) {

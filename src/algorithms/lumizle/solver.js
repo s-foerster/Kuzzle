@@ -67,8 +67,73 @@ function localDomain(grid, size, r, c, ruleIds) {
   return [CELL_DARK, CELL_LIGHT].filter(val => {
     if (creates2x2(grid, size, r, c, val, ruleIds)) return false;
     if (creates3InRow(grid, size, r, c, val, ruleIds)) return false;
+
+    // ── SYMMETRY_180 : la cellule symétrique doit être compatible ──
+    if (ruleIds.has('SYMMETRY_180')) {
+      const sr = size - 1 - r, sc = size - 1 - c;
+      if (sr !== r || sc !== c) {
+        const sym = grid[sr][sc];
+        if (sym !== CELL_UNKNOWN && sym !== val) return false;
+      }
+    }
+
+    // ── ROW_EXACT_DARK / ROW_EXACT_LIGHT ──
+    if (val === CELL_DARK && ruleIds.has('ROW_EXACT_DARK')) {
+      const n = ruleIds._rowExactDark ?? 1;
+      const darkInRow = grid[r].filter(v => v === CELL_DARK).length;
+      if (darkInRow >= n) return false;
+    }
+    if (val === CELL_LIGHT && ruleIds.has('ROW_EXACT_LIGHT')) {
+      const n = ruleIds._rowExactLight ?? 1;
+      const lightInRow = grid[r].filter(v => v === CELL_LIGHT).length;
+      if (lightInRow >= n) return false;
+    }
+
+    // ── COL_EXACT_DARK / COL_EXACT_LIGHT ──
+    if (val === CELL_DARK && ruleIds.has('COL_EXACT_DARK')) {
+      const n = ruleIds._colExactDark ?? 1;
+      const darkInCol = grid.reduce((s, row) => s + (row[c] === CELL_DARK ? 1 : 0), 0);
+      if (darkInCol >= n) return false;
+    }
+    if (val === CELL_LIGHT && ruleIds.has('COL_EXACT_LIGHT')) {
+      const n = ruleIds._colExactLight ?? 1;
+      const lightInCol = grid.reduce((s, row) => s + (row[c] === CELL_LIGHT ? 1 : 0), 0);
+      if (lightInCol >= n) return false;
+    }
+
+    // ── NURIBOU_STRIPES : placer DARK ne doit pas créer un groupe non-rectiligne ──
+    if (val === CELL_DARK && ruleIds.has('NURIBOU_STRIPES')) {
+      // Voisins sombres déjà présents
+      const darkNeighborRows = new Set();
+      const darkNeighborCols = new Set();
+      for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_DARK) {
+          darkNeighborRows.add(nr); darkNeighborCols.add(nc);
+        }
+      }
+      // Si des voisins sombres existent sur plusieurs lignes ET plusieurs colonnes → L-shape
+      if (darkNeighborRows.size > 0 && darkNeighborCols.size > 0) {
+        const allRows = new Set([r, ...darkNeighborRows]);
+        const allCols = new Set([c, ...darkNeighborCols]);
+        if (allRows.size > 1 && allCols.size > 1) return false;
+      }
+    }
+
     return true;
   });
+}
+
+/** Construit le Set de ruleIds enrichi avec les params (pour les règles ROW/COL_EXACT). */
+function buildRuleIds(rules) {
+  const ruleIds = new Set(rules.map(r => r.id));
+  for (const { id, params } of rules) {
+    if (id === 'ROW_EXACT_DARK' && params?.n != null) ruleIds._rowExactDark = params.n;
+    if (id === 'ROW_EXACT_LIGHT' && params?.n != null) ruleIds._rowExactLight = params.n;
+    if (id === 'COL_EXACT_DARK' && params?.n != null) ruleIds._colExactDark = params.n;
+    if (id === 'COL_EXACT_LIGHT' && params?.n != null) ruleIds._colExactLight = params.n;
+  }
+  return ruleIds;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,7 +151,7 @@ function localDomain(grid, size, r, c, ruleIds) {
  * @returns {number}   Nombre de solutions trouvées (≤ maxSolutions)
  */
 export function countSolutions(initialGrid, size, rules, maxSolutions = 2) {
-  const ruleIds = new Set(rules.map(r => r.id));
+  const ruleIds = buildRuleIds(rules);
 
   // Collecter les cellules inconnues
   const unknownCells = [];
@@ -148,9 +213,10 @@ export function countSolutions(initialGrid, size, rules, maxSolutions = 2) {
 
 /**
  * Trouve et retourne UNE solution valide, ou null si aucune n'existe.
+ * Si rng est fourni, randomise l'ordre d'essai des valeurs pour générer des solutions variées.
  */
-export function findSolution(initialGrid, size, rules) {
-  const ruleIds = new Set(rules.map(r => r.id));
+export function findSolution(initialGrid, size, rules, rng = null) {
+  const ruleIds = buildRuleIds(rules);
   const unknownCells = [];
   for (let r = 0; r < size; r++)
     for (let c = 0; c < size; c++)
@@ -192,6 +258,11 @@ export function findSolution(initialGrid, size, rules) {
     const domain = bestDomain ?? localDomain(work, size, r, c, ruleIds);
 
     if (domain.length === 0) return false;
+
+    // Randomize the domain order to generate different solutions
+    if (rng && domain.length > 1) {
+      if (rng.random() < 0.5) domain.reverse();
+    }
 
     for (const val of domain) {
       work[r][c] = val;
