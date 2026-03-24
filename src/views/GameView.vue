@@ -41,21 +41,27 @@
       <!-- Victoire -->
       <Transition name="victory-slide">
         <div v-if="isWon" class="victory-card">
-          <div class="victory-confetti">❤️</div>
-          <h2>Brillant !</h2>
-          <p>Vous avez résolu le puzzle avec succès.</p>
-          <div class="victory-stats">
-            <div class="stat-item">
-              <span class="stat-label">⏱ Temps</span>
-              <span class="stat-value">{{ formattedTime }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">🔍 Vérifications</span>
-              <span class="stat-value">{{ verifyCount }}</span>
+          <div class="victory-body">
+            <div class="victory-icon">❤️</div>
+            <div class="victory-text">
+              <h2>Brillant !</h2>
+              <p>Puzzle résolu avec succès.</p>
             </div>
           </div>
-          <div v-if="verifyCount === 0" class="perfect-badge">
-            ✨ Sans-faute
+          <div class="victory-footer">
+            <div class="victory-stats">
+              <div class="stat-item">
+                <span class="stat-label">⏱ Temps</span>
+                <span class="stat-value">{{ formattedTime }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">🔍 Vérif.</span>
+                <span class="stat-value">{{ verifyCount }}</span>
+              </div>
+            </div>
+            <div v-if="verifyCount === 0" class="perfect-badge">
+              ✨ Sans-faute
+            </div>
           </div>
         </div>
       </Transition>
@@ -892,78 +898,102 @@ onMounted(async () => {
 .victory-card {
   width: 100%;
   background: var(--color-bg-card);
-  border: 2px solid var(--color-primary-light);
+  border: 1px solid var(--color-primary-light);
   color: var(--color-text);
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: var(--radius-lg);
-  text-align: center;
   margin-bottom: 1rem;
   box-shadow: var(--shadow-md);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 .victory-card::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 4px;
+  bottom: 0;
+  width: 4px;
   background: var(--gradient-primary);
 }
-.victory-confetti {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+.victory-body {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-align: left;
+  padding-left: 0.5rem;
+}
+.victory-icon {
+  font-size: 1.7rem;
+  background: var(--color-primary-bg);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
   color: var(--color-primary);
 }
-.victory-card h2 {
-  font-size: 1.8rem;
+.victory-text h2 {
+  font-size: 1.25rem;
   font-weight: 800;
-  margin-bottom: 0.25rem;
+  margin: 0 0 0.1rem;
   color: var(--color-primary-dark);
+  line-height: 1.2;
 }
-.victory-card > p {
+.victory-text p {
   opacity: 0.9;
-  margin-bottom: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
   color: var(--color-text-soft);
+  line-height: 1.2;
+}
+.victory-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg-muted);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
 }
 .victory-stats {
   display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 0.75rem;
-  background: var(--color-bg-muted);
-  padding: 0.75rem;
-  border-radius: var(--radius-md);
+  align-items: center;
+  gap: 1.2rem;
+  margin: 0;
 }
 .stat-item {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
+  align-items: baseline;
+  gap: 0.4rem;
 }
 .stat-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--color-text-soft);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
 }
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
 }
 .perfect-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background: var(--color-primary-bg);
   border: 1px solid var(--color-primary-light);
   color: var(--color-primary-dark);
-  padding: 0.4rem 1rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  margin-top: 0.5rem;
+  margin: 0;
 }
 .victory-slide-enter-active {
   animation: slideDown 0.5s ease;
