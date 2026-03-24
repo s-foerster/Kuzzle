@@ -19,6 +19,7 @@ export function useGame() {
   const gameState = ref(Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(CELL_EMPTY)));
   const puzzle = ref(null);
   const isWon = ref(false);
+  const isWonByUserInSession = ref(false); // true uniquement quand l'utilisateur a gagné dans cette session (pas quand auto-rempli ou rechargé)
   const currentDate = ref(getTodaySeed());
   const isLoading = ref(true);
   const error = ref(null);
@@ -54,6 +55,7 @@ export function useGame() {
     error.value = null;
     stopTimer();
     isWon.value = false;
+    isWonByUserInSession.value = false;
 
     puzzle.value = {
       zones: practiceData.zones,
@@ -74,6 +76,7 @@ export function useGame() {
     error.value = null;
     stopTimer();
     isWon.value = false;
+    isWonByUserInSession.value = false;
 
     try {
       const url = customDate
@@ -183,6 +186,7 @@ export function useGame() {
     gameState.value = Array(puzzleSize).fill(null).map(() => Array(puzzleSize).fill(CELL_EMPTY));
     undoHistory.value = [];
     isWon.value = false;
+    isWonByUserInSession.value = false;
     saveGameState();
   }
 
@@ -280,6 +284,7 @@ export function useGame() {
     const wasNotWon = !isWon.value;
     isWon.value = true;
     if (wasNotWon) {
+      isWonByUserInSession.value = true;
       stopTimer();
       saveLevelStats(getCurrentLevelId(), elapsedTime.value, verifyCount.value);
       saveGameState();
@@ -465,6 +470,7 @@ export function useGame() {
     gameState,
     puzzle,
     isWon,
+    isWonByUserInSession,
     isLoading,
     error,
     currentDate,

@@ -142,7 +142,10 @@ const ariaLabel = computed(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition:
     background-color 0.15s ease,
     transform 0.1s ease;

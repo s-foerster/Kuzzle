@@ -155,7 +155,9 @@
             >
               <span v-if="cell.dateKey">{{ cell.day }}</span>
               <span
-                v-if="cell.dateKey && lumizleCompletedLevels.includes(cell.dateKey)"
+                v-if="
+                  cell.dateKey && lumizleCompletedLevels.includes(cell.dateKey)
+                "
                 class="cal-picker-done"
                 >✓</span
               >
@@ -400,10 +402,11 @@ const vClickOutside = {
 function loadArchiveDay(day) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const [dy, dm, dd] = day.dateKey.split('-').map(Number);
+  const [dy, dm, dd] = day.dateKey.split("-").map(Number);
   const dayDate = new Date(dy, dm - 1, dd);
   if (dayDate > today) {
-    lumizleError.value = 'Vous ne pouvez pas jouer aux puzzles des jours futurs.';
+    lumizleError.value =
+      "Vous ne pouvez pas jouer aux puzzles des jours futurs.";
     return;
   }
   currentArchiveDate.value = day.dateKey;
@@ -438,7 +441,7 @@ watch(lumizleIsWon, async (won) => {
   if (!lumizleCompletedLevels.value.includes(id)) {
     lumizleCompletedLevels.value.push(id);
     localStorage.setItem(
-      'lumizle-completed-levels',
+      "lumizle-completed-levels",
       JSON.stringify(lumizleCompletedLevels.value),
     );
   }
@@ -447,26 +450,29 @@ watch(lumizleIsWon, async (won) => {
   const isDateKey = /^\d{4}-\d{2}-\d{2}$/.test(id);
   if (authStore.isLoggedIn && isDateKey) {
     try {
-      const { supabase } = await import('../lib/supabase.js');
+      const { supabase } = await import("../lib/supabase.js");
       if (supabase) {
-        const { error: saveError } = await supabase.from('game_results').upsert(
+        const { error: saveError } = await supabase.from("game_results").upsert(
           {
             user_id: authStore.user.id,
-            game_type: 'lumizle',
+            game_type: "lumizle",
             puzzle_date: id,
             completed: true,
             time_seconds: lumizleElapsedSeconds.value,
           },
-          { onConflict: 'user_id,game_type,puzzle_date' },
+          { onConflict: "user_id,game_type,puzzle_date" },
         );
         if (saveError) {
-          console.error('❌ [LumizleView] Erreur sauvegarde Supabase:', saveError.message || saveError);
+          console.error(
+            "❌ [LumizleView] Erreur sauvegarde Supabase:",
+            saveError.message || saveError,
+          );
         } else {
-          console.log('✅ [LumizleView] Résultat sauvegardé dans Supabase');
+          console.log("✅ [LumizleView] Résultat sauvegardé dans Supabase");
         }
       }
     } catch (e) {
-      console.error('❌ [LumizleView] Supabase save exception:', e);
+      console.error("❌ [LumizleView] Supabase save exception:", e);
     }
   }
 });
@@ -607,7 +613,10 @@ onMounted(() => {
 .victory-card::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0; height: 4px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
   background: var(--gradient-primary);
 }
 .victory-confetti {

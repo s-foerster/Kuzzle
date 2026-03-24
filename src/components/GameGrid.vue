@@ -206,6 +206,7 @@ const gridStyle = computed(() => ({
   box-shadow: 0 4px 20px rgba(44, 44, 58, 0.12);
   background-color: #fff;
   position: relative;
+  touch-action: manipulation;
 }
 
 @media (max-width: 768px) {

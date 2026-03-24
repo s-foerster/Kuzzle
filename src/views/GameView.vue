@@ -319,6 +319,7 @@ const {
   gameState,
   puzzle,
   isWon,
+  isWonByUserInSession,
   isLoading,
   error,
   formattedDate,
@@ -608,7 +609,10 @@ async function syncCompletedFromSupabase() {
     );
 
     // Re-déclencher le check pour le puzzle actuellement affiché
-    checkAndFillIfCompleted();
+    // Pas d'auto-fill si l'utilisateur est en train de jouer (timer démarré mais pas encore gagné)
+    if (!isTimerStarted.value) {
+      checkAndFillIfCompleted();
+    }
   } catch (e) {
     console.error("❌ [GameView] Exception sync niveaux:", e);
   }
@@ -671,10 +675,9 @@ async function checkAndFillIfCompleted() {
     }
   }
 }
-watch(puzzle, (p) => {
+watch([puzzle, currentDate], ([p]) => {
   if (p) checkAndFillIfCompleted();
 });
-watch(currentDate, checkAndFillIfCompleted);
 
 // Sauvegarder dans localStorage + Supabase à la victoire
 watch(isWon, async (won) => {
@@ -701,7 +704,7 @@ watch(isWon, async (won) => {
   if (
     authStore.isLoggedIn &&
     !currentDate.value.startsWith("practice_") &&
-    isTimerStarted.value
+    isWonByUserInSession.value
   ) {
     try {
       const { supabase } = await import("../lib/supabase.js");
@@ -902,7 +905,10 @@ onMounted(async () => {
 .victory-card::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0; height: 4px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
   background: var(--gradient-primary);
 }
 .victory-confetti {
