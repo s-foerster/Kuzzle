@@ -57,6 +57,14 @@
           <div v-if="verifyCount === 0" class="perfect-badge">
             🏆 Perfect Game !
           </div>
+          <!-- Leaderboard dans la victory card -->
+          <div class="victory-leaderboard">
+            <LeaderboardPanel
+              v-if="currentLevelId"
+              :puzzle-date="currentLevelId"
+              game-type="hearts"
+            />
+          </div>
         </div>
       </Transition>
 
@@ -109,6 +117,14 @@
           📅
         </button>
       </div>
+
+      <!-- Leaderboard du niveau actif (calendrier ou practice) -->
+      <LeaderboardPanel
+        v-if="currentLevelId"
+        :puzzle-date="currentLevelId"
+        game-type="hearts"
+        class="archive-leaderboard"
+      />
 
       <!-- Picker calendrier mensuel -->
       <Transition name="picker-drop">
@@ -287,10 +303,12 @@ import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import GameGrid from "../components/GameGrid.vue";
 import HowToPlayModal from "../components/HowToPlay/HowToPlayModal.vue";
+import LeaderboardPanel from "../components/LeaderboardPanel.vue";
 import { useGame } from "../composables/useGame.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useSubscription } from "../composables/useSubscription.js";
+import { useLeaderboard } from "../composables/useLeaderboard.js";
 import puzzleCacheData from "../../puzzle-cache.json";
 
 const router = useRouter();
@@ -301,6 +319,8 @@ const {
   loading: paywallLoading,
   error: paywallError,
 } = useSubscription();
+
+const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
 
 // ── Composable jeu ───────────────────────────────────────────────────────────
 const {
@@ -712,6 +732,8 @@ watch(isWon, async (won) => {
           );
         } else {
           console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
+          // Invalider le cache leaderboard pour que la victoire s'affiche immédiatement
+          invalidateLeaderboardCache(completedId, "hearts");
         }
       }
     } catch (e) {
@@ -1384,6 +1406,21 @@ onMounted(async () => {
   color: var(--color-text-soft);
   margin: 0.6rem 0 0;
   opacity: 0.7;
+}
+
+/* ── Leaderboard ────────────────────────────────────────────────────────────── */
+.archive-leaderboard {
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+/* Leaderboard intégré dans la carte de victoire (fond vert) */
+.victory-leaderboard {
+  margin-top: 1rem;
+  text-align: left;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  /* Atténue la bordure externe du panel sur fond coloré */
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.3);
 }
 
 /* Check message */
