@@ -41,9 +41,9 @@
       <!-- Victoire -->
       <Transition name="victory-slide">
         <div v-if="lumizleIsWon" class="victory-card">
-          <div class="victory-confetti">🎉</div>
-          <h2>Félicitations&nbsp;!</h2>
-          <p>Vous avez résolu le puzzle Lumizle !</p>
+          <div class="victory-confetti">❤️</div>
+          <h2>Brillant !</h2>
+          <p>Vous avez résolu le puzzle Lumizle.</p>
           <div class="victory-stats">
             <div class="stat-item">
               <span class="stat-label">⏱ Temps</span>
@@ -593,32 +593,47 @@ onMounted(() => {
 
 .victory-card {
   width: 100%;
-  background: var(--gradient-success);
-  color: white;
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-primary-light);
+  color: var(--color-text);
   padding: 1.5rem;
   border-radius: var(--radius-lg);
   text-align: center;
   margin-bottom: 1rem;
   box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.victory-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: var(--gradient-primary);
 }
 .victory-confetti {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
+  color: var(--color-primary);
 }
 .victory-card h2 {
   font-size: 1.8rem;
   font-weight: 800;
   margin-bottom: 0.25rem;
+  color: var(--color-primary-dark);
 }
 .victory-card > p {
   opacity: 0.9;
   margin-bottom: 1rem;
+  color: var(--color-text-soft);
 }
 .victory-stats {
   display: flex;
   justify-content: center;
   gap: 2rem;
   margin-bottom: 0.75rem;
+  background: var(--color-bg-muted);
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
 }
 .stat-item {
   display: flex;
@@ -628,13 +643,14 @@ onMounted(() => {
 }
 .stat-label {
   font-size: 0.8rem;
-  opacity: 0.85;
+  color: var(--color-text-soft);
   font-weight: 600;
   text-transform: uppercase;
 }
 .stat-value {
   font-size: 1.5rem;
   font-weight: 800;
+  color: var(--color-primary);
   font-variant-numeric: tabular-nums;
 }
 
