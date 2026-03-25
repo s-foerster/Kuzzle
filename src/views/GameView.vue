@@ -58,6 +58,14 @@
               ✨ Sans-faute
             </div>
           </div>
+          <!-- Classement intégré dans la carte victoire -->
+          <div class="victory-leaderboard">
+            <LeaderboardPanel
+              v-if="currentLevelId"
+              :puzzle-date="currentLevelId"
+              game-type="hearts"
+            />
+          </div>
         </div>
       </Transition>
 
@@ -321,23 +329,13 @@
         <button @click="resetGameState" class="btn btn-secondary">🔄</button>
       </div>
 
-      <!-- Leaderboard accordéon (sous la grille) -->
-      <div class="leaderboard-section">
-        <button
-          class="leaderboard-toggle"
-          @click="showLeaderboard = !showLeaderboard"
-        >
-          🏆 Classement {{ showLeaderboard ? "▴" : "▾" }}
+      <!-- Nudge tutoriel -->
+      <p v-if="!isWon" class="tutorial-nudge">
+        Vous ne savez pas jouer ?
+        <button class="tutorial-nudge-link" @click="$emit('openTutorial')">
+          Voir la leçon interactive →
         </button>
-        <Transition name="leaderboard-expand">
-          <LeaderboardPanel
-            v-if="showLeaderboard && currentLevelId"
-            :puzzle-date="currentLevelId"
-            game-type="hearts"
-            class="archive-leaderboard"
-          />
-        </Transition>
-      </div>
+      </p>
     </div>
 
     <!-- Modal Comment jouer -->
@@ -614,9 +612,6 @@ function isDayLocked(dateKey) {
   return diffDays > FREE_DAYS;
 }
 
-// ── Leaderboard accordéon ─────────────────────────────────────────────────────
-const showLeaderboard = ref(false);
-
 // ── Modal Paywall ─────────────────────────────────────────────────────────────
 const showPremiumPaywall = ref(false);
 const paywallDateLabel = ref("");
@@ -815,7 +810,6 @@ watch([puzzle, currentDate], ([p]) => {
 // Sauvegarder dans localStorage + Supabase à la victoire
 watch(isWon, async (won) => {
   if (!won || !currentDate.value) return;
-  showLeaderboard.value = true;
   let completedId;
   if (currentDate.value.startsWith("practice_")) {
     completedId = currentDate.value.replace("practice_", "");
@@ -1676,6 +1670,29 @@ onMounted(async () => {
   margin-top: 0.5rem;
 }
 
+/* Nudge tutoriel */
+.tutorial-nudge {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+  text-align: center;
+}
+.tutorial-nudge-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tutorial-nudge-link:hover {
+  color: var(--color-primary-dark);
+}
+
 /* Check message */
 .check-message {
   margin: 0.75rem 0;
@@ -1710,7 +1727,7 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-top: 0.75rem;
   width: 100%;
 }
@@ -1782,25 +1799,13 @@ onMounted(async () => {
   }
 }
 @media (max-width: 380px) {
-  .date-timer-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
-  }
-  .date-text {
-    text-align: center;
-  }
   .timer-display {
-    font-size: 1.1rem;
-    padding: 0.35rem 0.8rem;
-  }
-  .actions {
-    flex-direction: column;
-    align-items: center;
+    font-size: 1rem;
+    padding: 0.3rem 0.65rem;
   }
   .btn {
-    width: 100%;
-    max-width: 280px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
   }
 }
 </style>
