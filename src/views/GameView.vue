@@ -108,7 +108,7 @@
         </div>
         <button
           class="btn-open-cal"
-          @click="isCalPickerOpen = !isCalPickerOpen"
+          @click="toggleCalPicker"
           :class="{ 'btn-open-cal--active': isCalPickerOpen }"
           title="Voir tous les puzzles"
         >
@@ -123,66 +123,110 @@
           class="cal-picker"
           v-click-outside="closeCalPicker"
         >
-          <!-- Navigation mois -->
+          <!-- Navigation mois / année -->
           <div class="cal-picker-header">
-            <button
-              class="cal-picker-nav"
-              @click="pickerMonthOffset--"
-              :disabled="!canGoToPrevMonth"
-            >
-              ‹
-            </button>
-            <span class="cal-picker-month">{{ pickerMonthLabel }}</span>
-            <button
-              class="cal-picker-nav"
-              @click="pickerMonthOffset++"
-              :disabled="!canGoToNextMonth"
-            >
-              ›
-            </button>
+            <template v-if="pickerViewMode === 'month'">
+              <button
+                class="cal-picker-nav"
+                @click="pickerMonthOffset--"
+                :disabled="!canGoToPrevMonth"
+              >
+                ‹
+              </button>
+              <span
+                class="cal-picker-month cal-picker-month--clickable"
+                @click="openYearView"
+                title="Choisir un mois rapidement"
+                >{{ pickerMonthLabel }} ▾</span
+              >
+              <button
+                class="cal-picker-nav"
+                @click="pickerMonthOffset++"
+                :disabled="!canGoToNextMonth"
+              >
+                ›
+              </button>
+            </template>
+            <template v-else>
+              <button
+                class="cal-picker-nav"
+                @click="yearViewYear--"
+                :disabled="!canGoToPrevYear"
+              >
+                ‹
+              </button>
+              <span class="cal-picker-month">{{ yearViewYear }}</span>
+              <button
+                class="cal-picker-nav"
+                @click="yearViewYear++"
+                :disabled="!canGoToNextYear"
+              >
+                ›
+              </button>
+            </template>
           </div>
-          <!-- Jours de la semaine -->
-          <div class="cal-picker-weekdays">
-            <span
-              v-for="wd in ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di']"
-              :key="wd"
-              >{{ wd }}</span
-            >
-          </div>
-          <!-- Grille jours -->
-          <div class="cal-picker-grid">
+          <!-- Vue mois : grille annuelle 3×4 -->
+          <div v-if="pickerViewMode === 'year'" class="cal-picker-year-grid">
             <button
-              v-for="cell in pickerGridCells"
-              :key="cell.key"
-              class="cal-picker-cell"
+              v-for="m in yearViewMonths"
+              :key="m.index"
+              class="cal-picker-month-btn"
               :class="{
-                'cal-picker-cell--empty': !cell.dateKey,
-                'cal-picker-cell--available': cell.available,
-                'cal-picker-cell--today': cell.isToday,
-                'cal-picker-cell--active': cell.dateKey === currentArchiveDate,
-                'cal-picker-cell--done':
-                  cell.dateKey && completedLevels.includes(cell.dateKey),
-                'cal-picker-cell--locked':
-                  cell.dateKey && isDayLocked(cell.dateKey),
+                'cal-picker-month-btn--available': m.isAvailable,
+                'cal-picker-month-btn--current': m.isCurrent,
+                'cal-picker-month-btn--active': m.isActive,
               }"
-              :disabled="!cell.available"
-              @click="cell.available && loadArchiveDateKey(cell.dateKey)"
+              :disabled="!m.isAvailable"
+              @click="m.isAvailable && selectMonthInYearView(m.index)"
             >
-              <span v-if="cell.dateKey">{{ cell.day }}</span>
-              <span
-                v-if="cell.dateKey && completedLevels.includes(cell.dateKey)"
-                class="cal-picker-done"
-                >✓</span
-              >
-              <span
-                v-else-if="
-                  cell.dateKey && isDayLocked(cell.dateKey) && cell.available
-                "
-                class="cal-picker-lock"
-                >🔒</span
-              >
+              {{ m.label }}
             </button>
           </div>
+          <!-- Vue jours : jours de la semaine + grille -->
+          <template v-if="pickerViewMode === 'month'">
+            <div class="cal-picker-weekdays">
+              <span
+                v-for="wd in ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di']"
+                :key="wd"
+                >{{ wd }}</span
+              >
+            </div>
+            <!-- Grille jours -->
+            <div class="cal-picker-grid">
+              <button
+                v-for="cell in pickerGridCells"
+                :key="cell.key"
+                class="cal-picker-cell"
+                :class="{
+                  'cal-picker-cell--empty': !cell.dateKey,
+                  'cal-picker-cell--available': cell.available,
+                  'cal-picker-cell--today': cell.isToday,
+                  'cal-picker-cell--active':
+                    cell.dateKey === currentArchiveDate,
+                  'cal-picker-cell--done':
+                    cell.dateKey && completedLevels.includes(cell.dateKey),
+                  'cal-picker-cell--locked':
+                    cell.dateKey && isDayLocked(cell.dateKey),
+                }"
+                :disabled="!cell.available"
+                @click="cell.available && loadArchiveDateKey(cell.dateKey)"
+              >
+                <span v-if="cell.dateKey">{{ cell.day }}</span>
+                <span
+                  v-if="cell.dateKey && completedLevels.includes(cell.dateKey)"
+                  class="cal-picker-done"
+                  >✓</span
+                >
+                <span
+                  v-else-if="
+                    cell.dateKey && isDayLocked(cell.dateKey) && cell.available
+                  "
+                  class="cal-picker-lock"
+                  >🔒</span
+                >
+              </button>
+            </div>
+          </template>
         </div>
       </Transition>
 
@@ -404,6 +448,8 @@ const currentArchiveDate = ref(todayKey);
 // ── Picker calendrier mensuel ─────────────────────────────────────────────────
 const isCalPickerOpen = ref(false);
 const pickerMonthOffset = ref(0); // 0 = mois courant, -1 = mois précédent…
+const pickerViewMode = ref("month"); // 'month' | 'year'
+const yearViewYear = ref(new Date().getFullYear());
 
 // Toutes les dates disponibles dans le cache
 const availableDateKeys = new Set(Object.keys(puzzleCacheData));
@@ -446,6 +492,69 @@ const canGoToNextMonth = computed(() => {
   today.setHours(0, 0, 0, 0);
   return pickerBaseDate.value < today;
 });
+
+// ── Vue annuelle ──────────────────────────────────────────────────────────────
+const MONTH_NAMES_FR = [
+  "Jan",
+  "Fév",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aoû",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Déc",
+];
+
+const yearViewMonths = computed(() => {
+  const today = new Date();
+  today.setDate(1);
+  today.setHours(0, 0, 0, 0);
+  const oldest = oldestAvailable.value;
+  const currentPickerYear = pickerBaseDate.value.getFullYear();
+  const currentPickerMonth = pickerBaseDate.value.getMonth();
+  const nowYear = today.getFullYear();
+  const nowMonth = today.getMonth();
+  return Array.from({ length: 12 }, (_, i) => {
+    const monthDate = new Date(yearViewYear.value, i, 1);
+    const isAvailable = monthDate <= today && monthDate >= oldest;
+    const isCurrent = yearViewYear.value === nowYear && i === nowMonth;
+    const isActive =
+      yearViewYear.value === currentPickerYear && i === currentPickerMonth;
+    return {
+      index: i,
+      label: MONTH_NAMES_FR[i],
+      isAvailable,
+      isCurrent,
+      isActive,
+    };
+  });
+});
+
+const canGoToPrevYear = computed(
+  () => yearViewYear.value > oldestAvailable.value.getFullYear(),
+);
+
+const canGoToNextYear = computed(
+  () => yearViewYear.value < new Date().getFullYear(),
+);
+
+function openYearView() {
+  yearViewYear.value = pickerBaseDate.value.getFullYear();
+  pickerViewMode.value = "year";
+}
+
+function selectMonthInYearView(monthIndex) {
+  const today = new Date();
+  const offset =
+    (yearViewYear.value - today.getFullYear()) * 12 +
+    (monthIndex - today.getMonth());
+  pickerMonthOffset.value = offset;
+  pickerViewMode.value = "month";
+}
 
 // Grille: cellules du mois (lundi en 1er, cases vides en début)
 const pickerGridCells = computed(() => {
@@ -522,6 +631,16 @@ function loadArchiveDateKey(dateKey) {
 
 function closeCalPicker() {
   isCalPickerOpen.value = false;
+  pickerViewMode.value = "month";
+}
+
+function toggleCalPicker() {
+  if (isCalPickerOpen.value) {
+    closeCalPicker();
+  } else {
+    pickerViewMode.value = "month";
+    isCalPickerOpen.value = true;
+  }
 }
 
 // Directive v-click-outside
@@ -1194,6 +1313,57 @@ onMounted(async () => {
   font-weight: 800;
   text-transform: capitalize;
   color: var(--color-text);
+}
+.cal-picker-month--clickable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+  transition:
+    background 0.12s,
+    color 0.12s;
+  user-select: none;
+}
+.cal-picker-month--clickable:hover {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+/* Grille 3×4 pour la vue annuelle */
+.cal-picker-year-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 0.25rem;
+}
+.cal-picker-month-btn {
+  padding: 0.45rem 0.2rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  cursor: not-allowed;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.cal-picker-month-btn--available {
+  cursor: pointer;
+  color: var(--color-text);
+  background: var(--color-bg-muted, #f5f0f1);
+}
+.cal-picker-month-btn--available:hover {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+.cal-picker-month-btn--current {
+  font-weight: 900;
+  color: var(--color-primary) !important;
+}
+.cal-picker-month-btn--active {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .cal-picker-nav {
   background: none;

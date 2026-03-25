@@ -30,7 +30,7 @@
             gratuits)
           </li>
           <li>
-            Les puzzles des jeux Coeurzzle et Lumizle sans restriction de date
+            Les puzzles des jeux Kuzzle et Lumizle sans restriction de date
           </li>
         </ul>
         <p>

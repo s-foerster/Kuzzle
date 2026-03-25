@@ -45,7 +45,7 @@
             vérifications)
           </li>
           <li>Date du puzzle joué</li>
-          <li>Type de jeu (Coeurzzle, Lumizle)</li>
+          <li>Type de jeu (Kuzzle, Lumizle)</li>
         </ul>
 
         <h3>Abonnement premium (si souscription)</h3>
