@@ -18,10 +18,7 @@
       <div v-if="!isWon" class="date-timer-row">
         <p class="date-text">{{ formattedDate }}</p>
         <div class="timer-right">
-          <div
-            class="timer-display"
-            :class="{ 'timer-paused': isPaused }"
-          >
+          <div class="timer-display" :class="{ 'timer-paused': isPaused }">
             <span class="timer-icon">⏱</span>
             <span class="timer-value">{{ formattedTime }}</span>
           </div>
@@ -326,8 +323,11 @@
 
       <!-- Leaderboard accordéon (sous la grille) -->
       <div class="leaderboard-section">
-        <button class="leaderboard-toggle" @click="showLeaderboard = !showLeaderboard">
-          🏆 Classement {{ showLeaderboard ? '▴' : '▾' }}
+        <button
+          class="leaderboard-toggle"
+          @click="showLeaderboard = !showLeaderboard"
+        >
+          🏆 Classement {{ showLeaderboard ? "▴" : "▾" }}
         </button>
         <Transition name="leaderboard-expand">
           <LeaderboardPanel
@@ -1662,7 +1662,9 @@ onMounted(async () => {
 }
 .leaderboard-expand-enter-active,
 .leaderboard-expand-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 }
 .leaderboard-expand-enter-from,
 .leaderboard-expand-leave-to {
