@@ -160,7 +160,7 @@ async function handleGoogle() {
   position: relative;
   width: 100%;
   max-width: 420px;
-  background: var(--color-surface);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.25),
@@ -276,7 +276,7 @@ async function handleGoogle() {
   top: 4px;
   bottom: 4px;
   width: calc(50% - 4px);
-  background: var(--color-surface);
+  background: var(--color-bg-card);
   border-radius: calc(var(--radius-md) - 2px);
   box-shadow: var(--shadow-sm);
   transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
