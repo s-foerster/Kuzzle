@@ -6,6 +6,21 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // Le client est null si les variables d'environnement ne sont pas définies.
 // Toutes les fonctions d'auth vérifient cette condition avant d'appeler Supabase,
 // ce qui permet à l'app de fonctionner sans configuration (mode anonyme uniquement).
+
+// Implémentation personnalisée du verrou Web Locks.
+// Le SDK utilise ce verrou pour sérialiser les refreshs de token entre onglets.
+// Par défaut le timeout est 10 s → isAcquireTimeout sur TOUTES les requêtes DB
+// quand un autre onglet détient le verrou (ex: rafraîchissement de token).
+// Sans timeout : on attend que le verrou soit libéré. C'est sûr car l'API
+// Web Locks libère automatiquement le verrou si l'onglet se ferme ou crashe.
+function noTimeoutLock(name, _acquireTimeout, fn) {
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return navigator.locks.request(name, fn)
+  }
+  // Fallback : Firefox en navigation privée et vieux navigateurs sans Web Locks
+  return fn()
+}
+
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -18,6 +33,9 @@ export const supabase = supabaseUrl && supabaseAnonKey
         // la seconde trouvant le verifier PKCE déjà consommé → erreur 401.
         detectSessionInUrl: false,
         flowType: 'pkce',
+        // Verrou sans timeout : élimine les isAcquireTimeout sur toutes les
+        // requêtes DB et appels auth quand plusieurs onglets sont ouverts.
+        lock: noTimeoutLock,
       },
     })
   : null
