@@ -60,6 +60,7 @@
             <LeaderboardPanel
               v-if="currentLevelId"
               :puzzle-date="currentLevelId"
+              :refresh-trigger="leaderboardRefreshTrigger"
               game-type="hearts"
             />
           </div>
@@ -363,6 +364,9 @@ const {
 } = useSubscription();
 
 const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
+
+// Trigger rechargement du LeaderboardPanel après sauvegarde victoire
+const leaderboardRefreshTrigger = ref(0);
 
 // ── Composable jeu ───────────────────────────────────────────────────────────
 const {
@@ -880,6 +884,7 @@ watch(isWon, async (won) => {
           console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
           // Invalider le cache leaderboard pour que la victoire s'affiche immédiatement
           invalidateLeaderboardCache(completedId, "hearts");
+          leaderboardRefreshTrigger.value++;
         }
       }
     } catch (e) {

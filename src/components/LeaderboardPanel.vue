@@ -157,6 +157,7 @@ import { useAuthStore } from "../stores/auth.js";
 const props = defineProps({
   puzzleDate: { type: String, required: true },
   gameType: { type: String, default: "hearts" },
+  refreshTrigger: { type: Number, default: 0 },
 });
 
 const authStore = useAuthStore();
@@ -208,6 +209,17 @@ watch(
   () => authStore.isLoggedIn,
   (loggedIn) => {
     if (loggedIn && props.puzzleDate) {
+      reset();
+      fetchLeaderboard(props.puzzleDate, props.gameType);
+    }
+  },
+);
+
+// Rechargement forcé après sauvegarde du score (refreshTrigger incrémenté par le parent)
+watch(
+  () => props.refreshTrigger,
+  (val) => {
+    if (val > 0 && props.puzzleDate && authStore.isLoggedIn) {
       reset();
       fetchLeaderboard(props.puzzleDate, props.gameType);
     }
