@@ -20,17 +20,15 @@
           <div class="game-card-arrow">›</div>
         </div>
 
-        <div class="game-card" @click="goToLumizle">
+        <div class="game-card game-card--disabled">
           <div class="game-card-icon">🔷</div>
           <div class="game-card-body">
             <h3>Lumizle</h3>
-            <p>
-              Colorez les cellules claires et sombres. Grille du
-              {{ formattedToday }}
-            </p>
-            <div class="game-card-badge">Quotidien</div>
+            <p>Colorez les cellules claires et sombres.</p>
+            <div class="game-card-badge game-card-badge--soon">
+              Bientôt disponible
+            </div>
           </div>
-          <div class="game-card-arrow">›</div>
         </div>
       </div>
     </section>
@@ -81,40 +79,6 @@
       </div>
     </section>
 
-    <!-- Practice Lumizle -->
-    <section class="lumizle-section">
-      <div class="lumizle-inner">
-        <h3 class="practice-title">Lumizle — Niveaux d'entraînement</h3>
-        <p class="practice-subtitle">
-          Pratiquez les puzzles de coloriage noir/blanc
-        </p>
-        <div class="practice-grid">
-          <div
-            v-for="level in lumizlePracticeLevels"
-            :key="level.id"
-            class="practice-card"
-            :class="`practice-card--${level.difficulty}`"
-            @click="startLumizlePractice(level)"
-          >
-            <div class="practice-card-header">
-              <span class="practice-diff-label">{{ level.label }}</span>
-              <span
-                v-if="lumizleCompletedLevels.includes(level.id)"
-                class="practice-done"
-                >✓</span
-              >
-            </div>
-            <div class="practice-card-name">{{ level.name }}</div>
-            <div class="practice-card-size">
-              Grille {{ level.puzzle.metadata.gridSize }}×{{
-                level.puzzle.metadata.gridSize
-              }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Newsletter -->
     <section class="newsletter-section">
       <div class="newsletter-inner">
@@ -157,7 +121,6 @@ import { useRouter } from "vue-router";
 import HowToPlayRules from "../components/HowToPlay/HowToPlayRules.vue";
 import { useNavigationStore } from "../stores/navigation.js";
 import practicePuzzlesData from "../../practice-puzzles.json";
-import lumizlePuzzlesData from "../data/lumizle-puzzles.json";
 
 const emit = defineEmits(["openTutorial"]);
 const router = useRouter();
@@ -176,10 +139,6 @@ const formattedToday = computed(() =>
 // ── Navigation ───────────────────────────────────────────────────────────────
 function goToGame() {
   router.push("/game");
-}
-
-function goToLumizle() {
-  router.push("/lumizle");
 }
 
 // ── Niveaux practice Hearts ──────────────────────────────────────────────────
@@ -213,40 +172,6 @@ function startPractice(level) {
   router.push("/game");
 }
 
-// ── Niveaux practice Lumizle ─────────────────────────────────────────────────
-const LUMIZLE_PRACTICE_KEEP = [
-  "easy_1",
-  "easy_2",
-  "easy_3",
-  "medium_1",
-  "medium_2",
-  "medium_3",
-];
-const LUMIZLE_LABELS_MAP = {
-  easy_1: { label: "Facile", name: "Niveau 1" },
-  easy_2: { label: "Facile", name: "Niveau 2" },
-  easy_3: { label: "Facile", name: "Niveau 3" },
-  medium_1: { label: "Moyen", name: "Niveau 1" },
-  medium_2: { label: "Moyen", name: "Niveau 2" },
-  medium_3: { label: "Moyen", name: "Niveau 3" },
-};
-const lumizlePracticeLevels = LUMIZLE_PRACTICE_KEEP.map((id) => {
-  const entry = lumizlePuzzlesData[id];
-  return entry ? { ...entry, ...LUMIZLE_LABELS_MAP[id] } : null;
-}).filter(Boolean);
-
-const lumizleCompletedLevels = ref(
-  JSON.parse(localStorage.getItem("lumizle-completed-levels") || "[]"),
-);
-
-function startLumizlePractice(entry) {
-  navStore.setPendingPuzzle("lumizle-practice", {
-    puzzle: entry.puzzle,
-    id: entry.id,
-  });
-  router.push("/lumizle");
-}
-
 // ── Newsletter ───────────────────────────────────────────────────────────────
 const newsletterEmail = ref("");
 const newsletterSubmitted = ref(!!localStorage.getItem("newsletterEmail"));
@@ -261,9 +186,6 @@ function submitNewsletter() {
 onMounted(() => {
   completedLevels.value = JSON.parse(
     localStorage.getItem("hearts-completed-levels") || "[]",
-  );
-  lumizleCompletedLevels.value = JSON.parse(
-    localStorage.getItem("lumizle-completed-levels") || "[]",
   );
 });
 </script>
@@ -343,6 +265,16 @@ onMounted(() => {
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   white-space: nowrap;
+}
+.game-card--disabled {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+.game-card-badge--soon {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #d1d5db;
 }
 .game-card-arrow {
   font-size: 1.5rem;
