@@ -173,6 +173,12 @@ onMounted(async () => {
   opacity: 0;
 }
 
+@media (max-width: 600px) {
+  .app-header {
+    padding: 0.6rem 1rem;
+  }
+}
+
 @media (max-width: 380px) {
   .header-logo {
     height: 2rem;

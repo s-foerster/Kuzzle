@@ -356,7 +356,7 @@ export function generateSolution(rng, size, rules, minLightRatio = 0.35, maxLigh
  * @param {number[][]} solution    - Grille solution complète
  * @param {number}     size
  * @param {SeededRandom} rng
- * @param {number}     clueRatio  - Proportion de cellules révélées (0.0 – 1.0)
+ * @param {number}     clueRatio  - Proportion de cellules révélées (0.0 - 1.0)
  * @returns {number[][]}           Grille avec UNKNOWN là où le joueur joue
  */
 export function selectClues(solution, size, rng, clueRatio = 0.35) {

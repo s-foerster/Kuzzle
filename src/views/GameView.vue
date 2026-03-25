@@ -14,28 +14,26 @@
 
     <!-- Jeu -->
     <div v-else-if="puzzle" class="game-container">
-      <!-- Date -->
-      <div class="date-display">
-        <p>{{ formattedDate }}</p>
-      </div>
-
-      <!-- Timer -->
-      <div class="timer-row">
-        <div
-          class="timer-display"
-          :class="{ 'timer-paused': isPaused, 'timer-won': isWon }"
-        >
-          <span class="timer-icon">⏱</span>
-          <span class="timer-value">{{ formattedTime }}</span>
+      <!-- Date + Timer (une seule ligne, masquée à la victoire) -->
+      <div v-if="!isWon" class="date-timer-row">
+        <p class="date-text">{{ formattedDate }}</p>
+        <div class="timer-right">
+          <div
+            class="timer-display"
+            :class="{ 'timer-paused': isPaused }"
+          >
+            <span class="timer-icon">⏱</span>
+            <span class="timer-value">{{ formattedTime }}</span>
+          </div>
+          <button
+            v-if="isTimerStarted"
+            @click="togglePause"
+            class="btn-pause"
+            :class="{ 'btn-pause--active': isPaused }"
+          >
+            {{ isPaused ? "▶ Reprendre" : "⏸ Pause" }}
+          </button>
         </div>
-        <button
-          v-if="isTimerStarted && !isWon"
-          @click="togglePause"
-          class="btn-pause"
-          :class="{ 'btn-pause--active': isPaused }"
-        >
-          {{ isPaused ? "▶ Reprendre" : "⏸ Pause" }}
-        </button>
       </div>
 
       <!-- Victoire -->
@@ -45,7 +43,7 @@
             <div class="victory-icon">❤️</div>
             <div class="victory-text">
               <h2>Brillant !</h2>
-              <p>Puzzle résolu avec succès.</p>
+              <p>{{ formattedDate }}</p>
             </div>
           </div>
           <div class="victory-footer">
@@ -230,14 +228,6 @@
         </div>
       </Transition>
 
-      <!-- Leaderboard du niveau actif (calendrier ou practice) -->
-      <LeaderboardPanel
-        v-if="currentLevelId"
-        :puzzle-date="currentLevelId"
-        game-type="hearts"
-        class="archive-leaderboard"
-      />
-
       <!-- Modal Paywall Premium -->
       <Teleport to="body">
         <Transition name="modal-fade">
@@ -332,6 +322,21 @@
           &#x21A9;
         </button>
         <button @click="resetGameState" class="btn btn-secondary">🔄</button>
+      </div>
+
+      <!-- Leaderboard accordéon (sous la grille) -->
+      <div class="leaderboard-section">
+        <button class="leaderboard-toggle" @click="showLeaderboard = !showLeaderboard">
+          🏆 Classement {{ showLeaderboard ? '▴' : '▾' }}
+        </button>
+        <Transition name="leaderboard-expand">
+          <LeaderboardPanel
+            v-if="showLeaderboard && currentLevelId"
+            :puzzle-date="currentLevelId"
+            game-type="hearts"
+            class="archive-leaderboard"
+          />
+        </Transition>
       </div>
     </div>
 
@@ -609,6 +614,9 @@ function isDayLocked(dateKey) {
   return diffDays > FREE_DAYS;
 }
 
+// ── Leaderboard accordéon ─────────────────────────────────────────────────────
+const showLeaderboard = ref(false);
+
 // ── Modal Paywall ─────────────────────────────────────────────────────────────
 const showPremiumPaywall = ref(false);
 const paywallDateLabel = ref("");
@@ -807,8 +815,7 @@ watch([puzzle, currentDate], ([p]) => {
 // Sauvegarder dans localStorage + Supabase à la victoire
 watch(isWon, async (won) => {
   if (!won || !currentDate.value) return;
-
-  // Construire l'ID du niveau
+  showLeaderboard.value = true;
   let completedId;
   if (currentDate.value.startsWith("practice_")) {
     completedId = currentDate.value.replace("practice_", "");
@@ -931,25 +938,28 @@ onMounted(async () => {
   align-items: center;
 }
 
-/* Date */
-.date-display {
-  text-align: center;
-  margin-bottom: 0.75rem;
+/* Date + Timer (row compact) */
+.date-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.6rem;
+  gap: 0.5rem;
 }
-.date-display p {
-  font-size: 0.95rem;
+.date-text {
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-soft);
   text-transform: capitalize;
+  flex: 1;
+  margin: 0;
 }
-
-/* Timer */
-.timer-row {
+.timer-right {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 .timer-display {
   display: flex;
@@ -1625,10 +1635,43 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
-/* ── Leaderboard ────────────────────────────────────────────────────────────── */
+/* ── Leaderboard accordéon ────────────────────────────────────────────────────── */
+.leaderboard-section {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+.leaderboard-toggle {
+  display: block;
+  width: 100%;
+  background: var(--color-bg-muted);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-soft);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.leaderboard-toggle:hover {
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+.leaderboard-expand-enter-active,
+.leaderboard-expand-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.leaderboard-expand-enter-from,
+.leaderboard-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 .archive-leaderboard {
   width: 100%;
-  margin-bottom: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 /* Check message */
@@ -1705,10 +1748,17 @@ onMounted(async () => {
 
 @media (max-width: 600px) {
   .app-main {
-    padding: 1rem 0.75rem 1.5rem;
+    padding: 0.5rem 0.75rem 1.5rem;
   }
   .game-container {
     max-width: 100%;
+  }
+  .date-timer-row {
+    margin-bottom: 0.4rem;
+  }
+  .timer-display {
+    font-size: 1.2rem;
+    padding: 0.4rem 0.9rem;
   }
   .pause-content {
     padding: 2rem 1.5rem;
@@ -1730,9 +1780,17 @@ onMounted(async () => {
   }
 }
 @media (max-width: 380px) {
+  .date-timer-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .date-text {
+    text-align: center;
+  }
   .timer-display {
-    font-size: 1.2rem;
-    padding: 0.4rem 1rem;
+    font-size: 1.1rem;
+    padding: 0.35rem 0.8rem;
   }
   .actions {
     flex-direction: column;

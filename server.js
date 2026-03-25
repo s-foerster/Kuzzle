@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -114,14 +116,130 @@ function cleanOldPuzzles() {
   // Rien à faire : on garde tous les puzzles indéfiniment
 }
 
+// ── Singletons Supabase ────────────────────────────────────────────────────
+// Créés une seule fois au démarrage (pas à chaque requête).
+const _supabaseAdmin = (() => {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+})();
+
+const _supabaseAnon = (() => {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+})();
+
+// ── Sécurité : origines autorisées ────────────────────────────────────────
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://rubihgames.com,https://www.rubihgames.com')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+const APP_URL = process.env.APP_URL || 'https://rubihgames.com';
+
+/**
+ * Retourne l'origine de la requête si elle est dans la whitelist,
+ * sinon retourne APP_URL. Empêche les open redirects dans les routes Stripe.
+ */
+function getSafeOrigin(req) {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) return origin;
+  return APP_URL;
+}
+
+/**
+ * Valide qu'une date est au format YYYY-MM-DD et dans une plage acceptable
+ * (pas avant 2024-01-01, pas plus de 30 jours dans le futur).
+ * Retourne null si valide, sinon un message d'erreur.
+ */
+function validateDateParam(date) {
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Format de date invalide (attendu YYYY-MM-DD)';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Date invalide';
+  const minDate = new Date('2024-01-01');
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
+  if (d < minDate || d > maxDate) return 'Date hors plage autorisée';
+  return null;
+}
+
+/**
+ * Retourne un message d'erreur sûr (masque les détails internes en production).
+ */
+function safeError(err) {
+  if (process.env.NODE_ENV === 'production') return 'Une erreur est survenue';
+  return err?.message || 'Erreur inconnue';
+}
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 // IMPORTANT : express.raw() DOIT être déclaré AVANT express.json().
 // La route webhook Stripe nécessite le body brut (Buffer) pour valider la
 // signature HMAC. Si express.json() passe en premier, le body est parsé et
 // la validation de signature échoue systématiquement.
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
-app.use(cors());
+
+// Helmet : headers HTTP sécurisés (X-Frame-Options, X-Content-Type-Options,
+// Strict-Transport-Security, Referrer-Policy, Content-Security-Policy…)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://js.stripe.com'],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+      connectSrc: ["'self'", 'https://*.supabase.co', 'https://api.stripe.com'],
+      frameSrc: ['https://js.stripe.com', 'https://hooks.stripe.com'],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
+
+// CORS : restreint aux domaines autorisés
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permettre les requêtes sans origin (curl, Postman, apps mobiles)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    // En dev, autoriser localhost
+    if (process.env.NODE_ENV !== 'production' && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origine non autorisée: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
+
+// ── Rate limiting ─────────────────────────────────────────────────────────
+// Limite générale sur toutes les routes /api/* : 60 requêtes / minute / IP
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Trop de requêtes, réessayez dans une minute.' },
+});
+
+// Limite stricte sur la pré-génération (opération CPU-intensive) : 5 / heure / IP
+const pregenerateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Limite de pré-génération atteinte.' },
+});
+
+// Rate limit global sur /api/* — le webhook Stripe n'y est pas soumis car il est
+// déclaré AVANT ce middleware dans l'ordre Express. La signature HMAC du webhook
+// constitue sa propre protection contre les abus.
+app.use('/api/', apiLimiter);
 
 // Assets hachés (JS, CSS, images) → cache 1 an
 app.use('/assets', express.static(path.join(__dirname, 'dist/assets'), {
@@ -152,6 +270,13 @@ function getTodayKey() {
 // API : Obtenir le puzzle du jour
 app.get('/api/daily-puzzle', async (req, res) => {
   const requestedDate = req.query.date; // YYYY-MM-DD optionnel
+
+  // Validation du paramètre date
+  const dateError = validateDateParam(requestedDate);
+  if (dateError) {
+    return res.status(400).json({ success: false, error: dateError });
+  }
+
   const todayKey = requestedDate || getTodayKey();
 
   console.log(`📥 Requête puzzle pour ${todayKey}`);
@@ -233,7 +358,7 @@ app.get('/api/daily-puzzle', async (req, res) => {
     console.error(`❌ Erreur génération puzzle:`, err);
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: safeError(err)
     });
   }
 });
@@ -241,6 +366,13 @@ app.get('/api/daily-puzzle', async (req, res) => {
 // API : Puzzle Lumizle quotidien
 app.get('/api/lumizle-daily', async (req, res) => {
   const requestedDate = req.query.date; // YYYY-MM-DD optionnel
+
+  // Validation du paramètre date
+  const dateError = validateDateParam(requestedDate);
+  if (dateError) {
+    return res.status(400).json({ success: false, error: dateError });
+  }
+
   const todayKey = requestedDate || getTodayKey();
 
   console.log(`📥 Requête Lumizle pour ${todayKey}`);
@@ -301,27 +433,18 @@ app.get('/api/lumizle-daily', async (req, res) => {
     console.error(`❌ Erreur génération Lumizle:`, err);
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: safeError(err)
     });
   }
 });
 
-// API : Obtenir les stats du cache
-app.get('/api/cache-stats', (req, res) => {
-  const dates = Object.keys(puzzleCache).sort();
-
-  res.json({
-    success: true,
-    totalPuzzles: dates.length,
-    dates: dates,
-    cacheSize: JSON.stringify(puzzleCache).length,
-    oldestPuzzle: dates[0] || null,
-    newestPuzzle: dates[dates.length - 1] || null
-  });
-});
-
-// API : Pré-générer le puzzle de demain (pour cron job)
-app.post('/api/pregenerate-tomorrow', async (req, res) => {
+// API : Pré-générer le puzzle de demain
+// Protégé : requiert un JWT valide + vérification admin via ADMIN_USER_ID
+app.post('/api/pregenerate-tomorrow', pregenerateLimiter, requireAuth, async (req, res) => {
+  const adminUserId = process.env.ADMIN_USER_ID;
+  if (adminUserId && req.userId !== adminUserId) {
+    return res.status(403).json({ success: false, error: 'Accès refusé' });
+  }
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowKey = tomorrow.toISOString().split('T')[0];
@@ -383,7 +506,7 @@ app.post('/api/pregenerate-tomorrow', async (req, res) => {
     console.error(`❌ Erreur pré-génération:`, err);
     return res.status(500).json({
       success: false,
-      error: err.message
+      error: safeError(err)
     });
   }
 });
@@ -399,22 +522,9 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-12-18.acacia' });
 }
 
-// Initialisation des clients Supabase réutilisables pour les routes Stripe
-function getSupabaseAdminClient() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) return null;
-  return createClient(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-function getSupabaseAnonClient() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return null;
-  return createClient(url, anonKey);
-}
+// Accesseurs Supabase — retournent les singletons initialisés au démarrage
+function getSupabaseAdminClient() { return _supabaseAdmin; }
+function getSupabaseAnonClient() { return _supabaseAnon; }
 
 /**
  * Middleware interne : vérifie le JWT Supabase.
@@ -477,8 +587,8 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       mode: 'subscription',                     // Abonnement récurrent (mensuel/annuel)
       line_items: [{ price: priceId, quantity: 1 }],
       // Retour après paiement réussi → profil avec indicateur de succès
-      success_url: `${req.headers.origin || process.env.APP_URL || ''}/profil?success=true`,
-      cancel_url: `${req.headers.origin || process.env.APP_URL || ''}/profil`,
+      success_url: `${getSafeOrigin(req)}/profil?success=true`,
+      cancel_url: `${getSafeOrigin(req)}/profil`,
       // CRITIQUE : mettre supabase_user_id dans metadata de la SESSION (pas seulement
       // dans subscription_data.metadata). Dans le webhook checkout.session.completed,
       // Stripe ne développe pas subscription_data → session.metadata est la seule
@@ -508,7 +618,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
 
   } catch (err) {
     console.error('❌ Stripe create-checkout-session:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: safeError(err) });
   }
 });
 
@@ -669,7 +779,7 @@ app.post('/api/stripe/portal', requireAuth, async (req, res) => {
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${req.headers.origin || process.env.APP_URL || ''}/profil`,
+      return_url: `${getSafeOrigin(req)}/profil`,
     });
 
     console.log(`✅ Stripe Portal session créée pour user ${req.userId}`);
@@ -677,7 +787,7 @@ app.post('/api/stripe/portal', requireAuth, async (req, res) => {
 
   } catch (err) {
     console.error('❌ Stripe create-portal-session:', err);
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: safeError(err) });
   }
 });
 
@@ -685,44 +795,21 @@ app.post('/api/stripe/portal', requireAuth, async (req, res) => {
 // ── FIN STRIPE PAYMENT ROUTES ─────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════
 
-// API : Supprimer le compte utilisateur
-app.delete('/api/account', async (req, res) => {
-  const authHeader = req.headers['authorization'] || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'Token manquant' });
-  }
-
-  const supabaseUrl = process.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+// API : Supprimer le compte utilisateur (protégé via requireAuth)
+app.delete('/api/account', requireAuth, async (req, res) => {
+  const adminClient = getSupabaseAdminClient();
+  if (!adminClient) {
     return res.status(503).json({ success: false, error: 'Supabase non configuré côté serveur' });
   }
 
-  // Vérifier le JWT avec le client anon
-  const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: { user }, error: userError } = await anonClient.auth.getUser(token);
-
-  if (userError || !user) {
-    return res.status(401).json({ success: false, error: 'Token invalide ou expiré' });
-  }
-
-  // Supprimer le compte avec le client service role
-  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
-
-  const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
+  const { error: deleteError } = await adminClient.auth.admin.deleteUser(req.userId);
 
   if (deleteError) {
     console.error('❌ Erreur suppression compte:', deleteError);
     return res.status(500).json({ success: false, error: 'Échec de la suppression du compte' });
   }
 
-  console.log(`✅ Compte supprimé : ${user.id}`);
+  console.log(`✅ Compte supprimé : ${req.userId}`);
   return res.json({ success: true });
 });
 
