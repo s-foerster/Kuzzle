@@ -14,23 +14,20 @@
 
     <!-- Jeu -->
     <div v-else-if="puzzle" class="game-container">
-      <!-- Date + Timer (une seule ligne, masquée à la victoire) -->
+      <!-- Timer (masqué à la victoire) -->
       <div v-if="!isWon" class="date-timer-row">
-        <p class="date-text">{{ formattedDate }}</p>
-        <div class="timer-right">
-          <div class="timer-display" :class="{ 'timer-paused': isPaused }">
-            <span class="timer-icon">⏱</span>
-            <span class="timer-value">{{ formattedTime }}</span>
-          </div>
-          <button
-            v-if="isTimerStarted"
-            @click="togglePause"
-            class="btn-pause"
-            :class="{ 'btn-pause--active': isPaused }"
-          >
-            {{ isPaused ? "▶ Reprendre" : "⏸ Pause" }}
-          </button>
+        <div class="timer-display" :class="{ 'timer-paused': isPaused }">
+          <span class="timer-icon">⏱</span>
+          <span class="timer-value">{{ formattedTime }}</span>
         </div>
+        <button
+          v-if="isTimerStarted"
+          @click="togglePause"
+          class="btn-pause"
+          :class="{ 'btn-pause--active': isPaused }"
+        >
+          {{ isPaused ? "▶ Reprendre" : "⏸ Pause" }}
+        </button>
       </div>
 
       <!-- Victoire -->
@@ -422,31 +419,59 @@ function getDateKey(d) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getLast7Days() {
-  const days = [];
-  const today = new Date();
-  for (let i = 0; i <= 6; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const isToday = i === 0;
-    days.push({
-      dateKey: getDateKey(d),
-      weekday: isToday
-        ? "Auj"
-        : d
-            .toLocaleDateString("fr-FR", { weekday: "short" })
-            .replace(".", "")
-            .slice(0, 3),
-      dayNum: String(d.getDate()).padStart(2, "0"),
-      isToday,
-    });
-  }
-  return days;
+function makeDayEntry(d) {
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const isToday = d.getTime() === todayDate.getTime();
+  return {
+    dateKey: getDateKey(d),
+    weekday: isToday
+      ? "Auj"
+      : d
+          .toLocaleDateString("fr-FR", { weekday: "short" })
+          .replace(".", "")
+          .slice(0, 3),
+    dayNum: String(d.getDate()).padStart(2, "0"),
+    isToday,
+  };
 }
 
-const last7Days = getLast7Days();
 const todayKey = getDateKey(new Date());
 const currentArchiveDate = ref(todayKey);
+
+// Fenêtre glissante de 7 jours centrée sur le jour sélectionné,
+// sauf si le jour sélectionné est dans les 3 derniers jours (on garde les 7 derniers)
+const last7Days = computed(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selected = new Date(currentArchiveDate.value);
+  selected.setHours(0, 0, 0, 0);
+  const diffFromToday = Math.round((today - selected) / 86400000);
+
+  let startOffset; // combien de jours avant le jour sélectionné on commence
+  if (diffFromToday <= 3) {
+    // Fenêtre standard : aujourd'hui en tête, 6 jours en arrière
+    const days = [];
+    for (let i = 0; i <= 6; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push(makeDayEntry(d));
+    }
+    return days;
+  } else {
+    // Centré : 3 jours avant + le jour sélectionné + 3 jours après
+    // On plafonne à today pour ne pas afficher des jours futurs
+    const days = [];
+    for (let i = -3; i <= 3; i++) {
+      const d = new Date(selected);
+      d.setDate(selected.getDate() + i);
+      if (d > today) continue; // pas de jours futurs
+      days.push(makeDayEntry(d));
+    }
+    return days;
+  }
+});
 
 // ── Picker calendrier mensuel ─────────────────────────────────────────────────
 const isCalPickerOpen = ref(false);
@@ -932,28 +957,14 @@ onMounted(async () => {
   align-items: center;
 }
 
-/* Date + Timer (row compact) */
+/* Timer centré */
 .date-timer-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
   margin-bottom: 0.6rem;
   gap: 0.5rem;
-}
-.date-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-soft);
-  text-transform: capitalize;
-  flex: 1;
-  margin: 0;
-}
-.timer-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
 }
 .timer-display {
   display: flex;
