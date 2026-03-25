@@ -28,6 +28,21 @@ const routes = [
     name: 'auth-callback',
     component: () => import('../views/AuthCallbackView.vue'),
   },
+  {
+    path: '/mentions-legales',
+    name: 'mentions-legales',
+    component: () => import('../views/MentionsLegalesView.vue'),
+  },
+  {
+    path: '/cgv',
+    name: 'cgv',
+    component: () => import('../views/CGVView.vue'),
+  },
+  {
+    path: '/politique-confidentialite',
+    name: 'politique-confidentialite',
+    component: () => import('../views/PolitiqueConfidentialiteView.vue'),
+  },
   // Redirect any unknown route to landing
   {
     path: '/:pathMatch(.*)*',

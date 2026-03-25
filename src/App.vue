@@ -45,6 +45,23 @@
     <!-- ===== MODALES GLOBALES ===== -->
     <TutorialModal :isOpen="isTutorialOpen" @close="isTutorialOpen = false" />
     <AuthModal />
+
+    <!-- ===== BANNIÈRE COOKIES ===== -->
+    <CookieBanner />
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <span class="footer-copy">© {{ currentYear }} Rubihgames</span>
+        <nav class="footer-links">
+          <RouterLink to="/mentions-legales">Mentions légales</RouterLink>
+          <RouterLink to="/cgv">CGV</RouterLink>
+          <RouterLink to="/politique-confidentialite"
+            >Confidentialité</RouterLink
+          >
+        </nav>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -55,11 +72,13 @@ import { useAuthStore } from "./stores/auth.js";
 import UserAvatar from "./components/UserAvatar.vue";
 import TutorialModal from "./components/TutorialModal.vue";
 import AuthModal from "./components/Auth/AuthModal.vue";
+import CookieBanner from "./components/CookieBanner.vue";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const isTutorialOpen = ref(false);
+const currentYear = new Date().getFullYear();
 
 // Afficher le bouton "retour" uniquement sur les pages de jeu
 const showBackButton = computed(() =>
@@ -160,6 +179,54 @@ onMounted(async () => {
   }
   .header-text-logo {
     height: 1.25rem;
+  }
+}
+
+/* ===== FOOTER ===== */
+.app-footer {
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border);
+  padding: 1rem 1.5rem;
+  margin-top: auto;
+}
+
+.footer-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--color-primary);
+}
+
+@media (max-width: 480px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 </style>
