@@ -11,7 +11,6 @@
       >
         <Transition name="modal-scale">
           <div v-if="authStore.authModalOpen" class="modal-card">
-
             <!-- Bouton fermer -->
             <button
               class="modal-close"
@@ -23,16 +22,19 @@
 
             <!-- Entête de marque -->
             <div class="modal-brand">
-              <img src="../../assets/kuzzle_logo.png" alt="Kuzzle" class="modal-logo" />
-              <span class="modal-brand-name">Kuzzle</span>
-              <p class="modal-tagline">Sauvegardez vos scores et suivez vos progrès</p>
+              <img
+                src="../../assets/rubihgames_logo.png"
+                alt="Rubihgames"
+                class="modal-logo"
+              />
+              <span class="modal-brand-name">Rubihgames</span>
+              <p class="modal-tagline">
+                Sauvegardez vos scores et suivez vos progrès
+              </p>
             </div>
 
             <!-- Bouton Google -->
-            <GoogleAuthButton
-              :loading="googleLoading"
-              @click="handleGoogle"
-            />
+            <GoogleAuthButton :loading="googleLoading" @click="handleGoogle" />
 
             <!-- Séparateur -->
             <div class="modal-divider">
@@ -88,7 +90,10 @@
             <p class="modal-switch">
               <template v-if="activeTab === 'login'">
                 Pas encore de compte ?
-                <button class="modal-switch-link" @click="activeTab = 'register'">
+                <button
+                  class="modal-switch-link"
+                  @click="activeTab = 'register'"
+                >
                   S'inscrire
                 </button>
               </template>
@@ -99,7 +104,6 @@
                 </button>
               </template>
             </p>
-
           </div>
         </Transition>
       </div>
@@ -108,27 +112,30 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { useAuthStore } from '../../stores/auth.js'
-import GoogleAuthButton from './GoogleAuthButton.vue'
-import LoginForm from './LoginForm.vue'
-import RegisterForm from './RegisterForm.vue'
+import { ref, watch } from "vue";
+import { useAuthStore } from "../../stores/auth.js";
+import GoogleAuthButton from "./GoogleAuthButton.vue";
+import LoginForm from "./LoginForm.vue";
+import RegisterForm from "./RegisterForm.vue";
 
-const authStore     = useAuthStore()
-const googleLoading = ref(false)
-const activeTab     = ref('login')
+const authStore = useAuthStore();
+const googleLoading = ref(false);
+const activeTab = ref("login");
 
 // Sync activeTab when modal opens
-watch(() => authStore.authModalOpen, (open) => {
-  if (open) {
-    activeTab.value    = authStore.authModalInitialTab ?? 'login'
-    googleLoading.value = false
-  }
-})
+watch(
+  () => authStore.authModalOpen,
+  (open) => {
+    if (open) {
+      activeTab.value = authStore.authModalInitialTab ?? "login";
+      googleLoading.value = false;
+    }
+  },
+);
 
 async function handleGoogle() {
-  googleLoading.value = true
-  await authStore.loginWithGoogle()
+  googleLoading.value = true;
+  await authStore.loginWithGoogle();
   // After OAuth redirect, page navigates away — no need to reset loading
 }
 </script>
@@ -136,8 +143,12 @@ async function handleGoogle() {
 <style scoped>
 /* ── Backdrop ───────────────────────────────────────────────────────────────── */
 .modal-backdrop {
-  position: fixed; inset: 0; z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(6px);
@@ -147,58 +158,90 @@ async function handleGoogle() {
 /* ── Carte ──────────────────────────────────────────────────────────────────── */
 .modal-card {
   position: relative;
-  width: 100%; max-width: 420px;
+  width: 100%;
+  max-width: 420px;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.08) inset;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   padding: 2rem 2rem 1.75rem;
-  display: flex; flex-direction: column; gap: 1.25rem;
-  max-height: 90vh; overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* ── Fermer ─────────────────────────────────────────────────────────────────── */
 .modal-close {
-  position: absolute; top: 1rem; right: 1rem;
-  background: var(--color-bg); border: 1px solid var(--color-border);
-  border-radius: 50%; width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem; color: var(--color-text-soft);
-  cursor: pointer; transition: all 0.2s ease;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
   line-height: 1;
 }
 .modal-close:hover {
-  background: var(--color-error-light); color: var(--color-error);
+  background: var(--color-error-light);
+  color: var(--color-error);
   border-color: var(--color-error);
 }
 
 /* ── Brand ──────────────────────────────────────────────────────────────────── */
 .modal-brand {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 0.25rem; text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
 }
 .modal-logo {
-  width: 48px; height: 48px; object-fit: contain;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
   border-radius: var(--radius-sm);
 }
 .modal-brand-name {
-  font-size: 1.4rem; font-weight: 900; color: var(--color-primary);
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--color-primary);
   letter-spacing: -0.02em;
 }
 .modal-tagline {
-  font-size: 0.82rem; color: var(--color-text-soft);
-  margin: 0; opacity: 0.8;
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+  margin: 0;
+  opacity: 0.8;
 }
 
 /* ── Séparateur ─────────────────────────────────────────────────────────────── */
 .modal-divider {
-  display: flex; align-items: center; gap: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 .modal-divider-line {
-  flex: 1; height: 1px; background: var(--color-border);
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
 }
 .modal-divider-text {
-  font-size: 0.78rem; font-weight: 700;
-  color: var(--color-text-soft); text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* ── Onglets ────────────────────────────────────────────────────────────────── */
@@ -211,17 +254,27 @@ async function handleGoogle() {
   gap: 0;
 }
 .modal-tab {
-  flex: 1; padding: 0.55rem 0;
-  background: none; border: none;
-  font-family: var(--font-family); font-size: 0.9rem; font-weight: 700;
+  flex: 1;
+  padding: 0.55rem 0;
+  background: none;
+  border: none;
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--color-text-soft);
-  cursor: pointer; position: relative; z-index: 1;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
   transition: color 0.2s;
 }
-.modal-tab--active { color: var(--color-primary); }
+.modal-tab--active {
+  color: var(--color-primary);
+}
 
 .modal-tab-indicator {
-  position: absolute; top: 4px; bottom: 4px;
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
   width: calc(50% - 4px);
   background: var(--color-surface);
   border-radius: calc(var(--radius-md) - 2px);
@@ -238,37 +291,75 @@ async function handleGoogle() {
 
 /* ── Lien switch ────────────────────────────────────────────────────────────── */
 .modal-switch {
-  text-align: center; font-size: 0.83rem;
-  color: var(--color-text-soft); margin: 0;
+  text-align: center;
+  font-size: 0.83rem;
+  color: var(--color-text-soft);
+  margin: 0;
 }
 .modal-switch-link {
-  background: none; border: none;
-  color: var(--color-primary); font-weight: 700; font-size: 0.83rem;
-  cursor: pointer; padding: 0; margin-left: 0.25rem;
-  text-decoration: underline; text-underline-offset: 2px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.83rem;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.25rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   transition: opacity 0.2s;
 }
-.modal-switch-link:hover { opacity: 0.75; }
+.modal-switch-link:hover {
+  opacity: 0.75;
+}
 
 /* ── Transitions ────────────────────────────────────────────────────────────── */
 .modal-fade-enter-active,
-.modal-fade-leave-active { transition: opacity 0.25s ease; }
+.modal-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
 .modal-fade-enter-from,
-.modal-fade-leave-to     { opacity: 0; }
+.modal-fade-leave-to {
+  opacity: 0;
+}
 
-.modal-scale-enter-active { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.modal-scale-leave-active { animation: scaleOut 0.2s ease forwards; }
+.modal-scale-enter-active {
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-scale-leave-active {
+  animation: scaleOut 0.2s ease forwards;
+}
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.92) translateY(16px); }
-  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 @keyframes scaleOut {
-  from { opacity: 1; transform: scale(1);    }
-  to   { opacity: 0; transform: scale(0.94); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.94);
+  }
 }
 
 .form-slide-enter-active,
-.form-slide-leave-active { transition: all 0.2s ease; }
-.form-slide-enter-from   { opacity: 0; transform: translateX(12px); }
-.form-slide-leave-to     { opacity: 0; transform: translateX(-12px); }
+.form-slide-leave-active {
+  transition: all 0.2s ease;
+}
+.form-slide-enter-from {
+  opacity: 0;
+  transform: translateX(12px);
+}
+.form-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
 </style>

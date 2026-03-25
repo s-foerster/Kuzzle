@@ -17,11 +17,15 @@
         <!-- Marque -->
         <RouterLink to="/" class="header-brand">
           <img
-            src="./assets/kuzzle_logo.png"
-            alt="Kuzzle"
+            src="./assets/rubihgames_mascotte_logo-removebg.png"
+            alt="Rubihgames"
             class="header-logo"
           />
-          <h1 class="brand-title">Kuzzle</h1>
+          <img
+            src="./assets/rubihgames_text_logo-removebg-preview.png"
+            alt="Rubihgames"
+            class="header-text-logo"
+          />
         </RouterLink>
 
         <!-- Actions droite -->
@@ -102,18 +106,15 @@ onMounted(async () => {
 }
 
 .header-logo {
-  height: 2rem;
+  height: 2.5rem;
   width: auto;
   display: block;
 }
 
-.brand-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--color-primary);
-  font-family: var(--font-family);
+.header-text-logo {
+  height: 1.6rem;
+  width: auto;
+  display: block;
 }
 
 .header-actions {
@@ -155,10 +156,10 @@ onMounted(async () => {
 
 @media (max-width: 380px) {
   .header-logo {
-    height: 1.6rem;
+    height: 2rem;
   }
-  .brand-title {
-    font-size: 1.25rem;
+  .header-text-logo {
+    height: 1.25rem;
   }
 }
 </style>

@@ -11,8 +11,10 @@
         <div class="game-card" @click="goToGame">
           <div class="game-card-icon">❤️</div>
           <div class="game-card-body">
-            <h3>Puzzle Cœurs</h3>
-            <p>Placez les cœurs selon les règles. Grille du {{ formattedToday }}</p>
+            <h3>Kuzzle</h3>
+            <p>
+              Placez les cœurs selon les règles. Grille du {{ formattedToday }}
+            </p>
             <div class="game-card-badge">Quotidien</div>
           </div>
           <div class="game-card-arrow">›</div>
@@ -22,7 +24,10 @@
           <div class="game-card-icon">🔷</div>
           <div class="game-card-body">
             <h3>Lumizle</h3>
-            <p>Colorez les cellules claires et sombres. Grille du {{ formattedToday }}</p>
+            <p>
+              Colorez les cellules claires et sombres. Grille du
+              {{ formattedToday }}
+            </p>
             <div class="game-card-badge">Quotidien</div>
           </div>
           <div class="game-card-arrow">›</div>
@@ -47,7 +52,9 @@
         <!-- Practice Hearts -->
         <div class="practice-section">
           <h3 class="practice-title">Niveaux d'entraînement</h3>
-          <p class="practice-subtitle">Entraînez-vous avant le puzzle du jour</p>
+          <p class="practice-subtitle">
+            Entraînez-vous avant le puzzle du jour
+          </p>
           <div class="practice-grid">
             <div
               v-for="level in practiceLevels"
@@ -58,10 +65,16 @@
             >
               <div class="practice-card-header">
                 <span class="practice-diff-label">{{ level.label }}</span>
-                <span v-if="completedLevels.includes(level.id)" class="practice-done">✓</span>
+                <span
+                  v-if="completedLevels.includes(level.id)"
+                  class="practice-done"
+                  >✓</span
+                >
               </div>
               <div class="practice-card-name">{{ level.name }}</div>
-              <div class="practice-card-size">Grille {{ level.gridSize }}×{{ level.gridSize }}</div>
+              <div class="practice-card-size">
+                Grille {{ level.gridSize }}×{{ level.gridSize }}
+              </div>
             </div>
           </div>
         </div>
@@ -72,7 +85,9 @@
     <section class="lumizle-section">
       <div class="lumizle-inner">
         <h3 class="practice-title">Lumizle — Niveaux d'entraînement</h3>
-        <p class="practice-subtitle">Pratiquez les puzzles de coloriage noir/blanc</p>
+        <p class="practice-subtitle">
+          Pratiquez les puzzles de coloriage noir/blanc
+        </p>
         <div class="practice-grid">
           <div
             v-for="level in lumizlePracticeLevels"
@@ -83,11 +98,17 @@
           >
             <div class="practice-card-header">
               <span class="practice-diff-label">{{ level.label }}</span>
-              <span v-if="lumizleCompletedLevels.includes(level.id)" class="practice-done">✓</span>
+              <span
+                v-if="lumizleCompletedLevels.includes(level.id)"
+                class="practice-done"
+                >✓</span
+              >
             </div>
             <div class="practice-card-name">{{ level.name }}</div>
             <div class="practice-card-size">
-              Grille {{ level.puzzle.metadata.gridSize }}×{{ level.puzzle.metadata.gridSize }}
+              Grille {{ level.puzzle.metadata.gridSize }}×{{
+                level.puzzle.metadata.gridSize
+              }}
             </div>
           </div>
         </div>
@@ -110,10 +131,16 @@
             class="newsletter-input"
             required
           />
-          <button v-if="!newsletterSubmitted" type="submit" class="btn btn-primary">
+          <button
+            v-if="!newsletterSubmitted"
+            type="submit"
+            class="btn btn-primary"
+          >
             S'inscrire
           </button>
-          <p v-else class="newsletter-confirm">✉️ Merci ! Vous serez notifié.</p>
+          <p v-else class="newsletter-confirm">
+            ✉️ Merci ! Vous serez notifié.
+          </p>
         </form>
       </div>
     </section>
@@ -125,102 +152,120 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import HowToPlayRules from '../components/HowToPlay/HowToPlayRules.vue'
-import { useNavigationStore } from '../stores/navigation.js'
-import practicePuzzlesData  from '../../practice-puzzles.json'
-import lumizlePuzzlesData   from '../data/lumizle-puzzles.json'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import HowToPlayRules from "../components/HowToPlay/HowToPlayRules.vue";
+import { useNavigationStore } from "../stores/navigation.js";
+import practicePuzzlesData from "../../practice-puzzles.json";
+import lumizlePuzzlesData from "../data/lumizle-puzzles.json";
 
-const emit   = defineEmits(['openTutorial'])
-const router = useRouter()
-const navStore = useNavigationStore()
+const emit = defineEmits(["openTutorial"]);
+const router = useRouter();
+const navStore = useNavigationStore();
 
 // ── Date d'aujourd'hui (format FR) ──────────────────────────────────────────
 const formattedToday = computed(() =>
-  new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  })
-)
+  new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }),
+);
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 function goToGame() {
-  router.push('/game')
+  router.push("/game");
 }
 
 function goToLumizle() {
-  router.push('/lumizle')
+  router.push("/lumizle");
 }
 
 // ── Niveaux practice Hearts ──────────────────────────────────────────────────
-const PRACTICE_KEEP = ['easy_2', 'medium_1', 'medium_3', 'hard_1', 'hard_2', 'hard_3']
+const PRACTICE_KEEP = [
+  "easy_2",
+  "medium_1",
+  "medium_3",
+  "hard_1",
+  "hard_2",
+  "hard_3",
+];
 const PRACTICE_LABELS = [
-  { label: 'Facile', name: 'Niveau 1' },
-  { label: 'Facile', name: 'Niveau 2' },
-  { label: 'Moyen',  name: 'Niveau 1' },
-  { label: 'Moyen',  name: 'Niveau 2' },
-  { label: 'Difficile', name: 'Niveau 1' },
-  { label: 'Difficile', name: 'Niveau 2' },
-]
+  { label: "Facile", name: "Niveau 1" },
+  { label: "Facile", name: "Niveau 2" },
+  { label: "Moyen", name: "Niveau 1" },
+  { label: "Moyen", name: "Niveau 2" },
+  { label: "Difficile", name: "Niveau 1" },
+  { label: "Difficile", name: "Niveau 2" },
+];
 const practiceLevels = practicePuzzlesData
-  .filter(p => PRACTICE_KEEP.includes(p.id))
+  .filter((p) => PRACTICE_KEEP.includes(p.id))
   .sort((a, b) => PRACTICE_KEEP.indexOf(a.id) - PRACTICE_KEEP.indexOf(b.id))
-  .map((p, i) => ({ ...p, ...PRACTICE_LABELS[i] }))
+  .map((p, i) => ({ ...p, ...PRACTICE_LABELS[i] }));
 
 const completedLevels = ref(
-  JSON.parse(localStorage.getItem('hearts-completed-levels') || '[]')
-)
+  JSON.parse(localStorage.getItem("hearts-completed-levels") || "[]"),
+);
 
 function startPractice(level) {
-  navStore.setPendingPuzzle('practice', level)
-  router.push('/game')
+  navStore.setPendingPuzzle("practice", level);
+  router.push("/game");
 }
 
 // ── Niveaux practice Lumizle ─────────────────────────────────────────────────
-const LUMIZLE_PRACTICE_KEEP = ['easy_1', 'easy_2', 'easy_3', 'medium_1', 'medium_2', 'medium_3']
+const LUMIZLE_PRACTICE_KEEP = [
+  "easy_1",
+  "easy_2",
+  "easy_3",
+  "medium_1",
+  "medium_2",
+  "medium_3",
+];
 const LUMIZLE_LABELS_MAP = {
-  easy_1:   { label: 'Facile', name: 'Niveau 1' },
-  easy_2:   { label: 'Facile', name: 'Niveau 2' },
-  easy_3:   { label: 'Facile', name: 'Niveau 3' },
-  medium_1: { label: 'Moyen',  name: 'Niveau 1' },
-  medium_2: { label: 'Moyen',  name: 'Niveau 2' },
-  medium_3: { label: 'Moyen',  name: 'Niveau 3' },
-}
-const lumizlePracticeLevels = LUMIZLE_PRACTICE_KEEP
-  .map(id => {
-    const entry = lumizlePuzzlesData[id]
-    return entry ? { ...entry, ...LUMIZLE_LABELS_MAP[id] } : null
-  })
-  .filter(Boolean)
+  easy_1: { label: "Facile", name: "Niveau 1" },
+  easy_2: { label: "Facile", name: "Niveau 2" },
+  easy_3: { label: "Facile", name: "Niveau 3" },
+  medium_1: { label: "Moyen", name: "Niveau 1" },
+  medium_2: { label: "Moyen", name: "Niveau 2" },
+  medium_3: { label: "Moyen", name: "Niveau 3" },
+};
+const lumizlePracticeLevels = LUMIZLE_PRACTICE_KEEP.map((id) => {
+  const entry = lumizlePuzzlesData[id];
+  return entry ? { ...entry, ...LUMIZLE_LABELS_MAP[id] } : null;
+}).filter(Boolean);
 
 const lumizleCompletedLevels = ref(
-  JSON.parse(localStorage.getItem('lumizle-completed-levels') || '[]')
-)
+  JSON.parse(localStorage.getItem("lumizle-completed-levels") || "[]"),
+);
 
 function startLumizlePractice(entry) {
-  navStore.setPendingPuzzle('lumizle-practice', { puzzle: entry.puzzle, id: entry.id })
-  router.push('/lumizle')
+  navStore.setPendingPuzzle("lumizle-practice", {
+    puzzle: entry.puzzle,
+    id: entry.id,
+  });
+  router.push("/lumizle");
 }
 
 // ── Newsletter ───────────────────────────────────────────────────────────────
-const newsletterEmail     = ref('')
-const newsletterSubmitted = ref(!!localStorage.getItem('newsletterEmail'))
+const newsletterEmail = ref("");
+const newsletterSubmitted = ref(!!localStorage.getItem("newsletterEmail"));
 function submitNewsletter() {
-  if (!newsletterEmail.value) return
-  localStorage.setItem('newsletterEmail', newsletterEmail.value)
-  newsletterSubmitted.value = true
+  if (!newsletterEmail.value) return;
+  localStorage.setItem("newsletterEmail", newsletterEmail.value);
+  newsletterSubmitted.value = true;
 }
 
 // Relire les niveaux complétés depuis localStorage à chaque montage
 // (ex: retour depuis /game après une victoire)
 onMounted(() => {
   completedLevels.value = JSON.parse(
-    localStorage.getItem('hearts-completed-levels') || '[]'
-  )
+    localStorage.getItem("hearts-completed-levels") || "[]",
+  );
   lumizleCompletedLevels.value = JSON.parse(
-    localStorage.getItem('lumizle-completed-levels') || '[]'
-  )
-})
+    localStorage.getItem("lumizle-completed-levels") || "[]",
+  );
+});
 </script>
 
 <style scoped>
@@ -269,8 +314,13 @@ onMounted(() => {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
-.game-card-icon { font-size: 2rem; flex-shrink: 0; }
-.game-card-body { flex: 1; }
+.game-card-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+.game-card-body {
+  flex: 1;
+}
 .game-card-body h3 {
   margin: 0 0 0.2rem;
   font-size: 1rem;
@@ -307,7 +357,10 @@ onMounted(() => {
   padding: 2rem 1.5rem;
   flex: 1;
 }
-.how-inner { max-width: 700px; margin: 0 auto; }
+.how-inner {
+  max-width: 700px;
+  margin: 0 auto;
+}
 .how-title {
   font-size: 1.3rem;
   font-weight: 800;
@@ -333,7 +386,9 @@ onMounted(() => {
   padding: 0.3rem 0.75rem;
   border-radius: 20px;
   cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
   white-space: nowrap;
 }
 .btn-lesson:hover {
@@ -351,7 +406,9 @@ onMounted(() => {
 }
 
 /* ── Practice ── */
-.practice-section { margin-top: 0.5rem; }
+.practice-section {
+  margin-top: 0.5rem;
+}
 .practice-title {
   font-size: 1.05rem;
   font-weight: 800;
@@ -381,9 +438,15 @@ onMounted(() => {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
-.practice-card--easy   { border-left: 3px solid var(--color-success); }
-.practice-card--medium { border-left: 3px solid var(--color-warning); }
-.practice-card--hard   { border-left: 3px solid var(--color-error); }
+.practice-card--easy {
+  border-left: 3px solid var(--color-success);
+}
+.practice-card--medium {
+  border-left: 3px solid var(--color-warning);
+}
+.practice-card--hard {
+  border-left: 3px solid var(--color-error);
+}
 .practice-card-header {
   display: flex;
   justify-content: space-between;
@@ -397,9 +460,20 @@ onMounted(() => {
   letter-spacing: 0.05em;
   color: var(--color-text-soft);
 }
-.practice-done { color: var(--color-success); font-weight: 800; font-size: 0.9rem; }
-.practice-card-name { font-size: 0.88rem; font-weight: 700; color: var(--color-text); }
-.practice-card-size { font-size: 0.75rem; color: var(--color-text-soft); }
+.practice-done {
+  color: var(--color-success);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.practice-card-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.practice-card-size {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+}
 
 /* ── Lumizle section ── */
 .lumizle-section {
@@ -407,7 +481,10 @@ onMounted(() => {
   border-top: 1.5px solid var(--color-border);
   padding: 1.5rem;
 }
-.lumizle-inner { max-width: 700px; margin: 0 auto; }
+.lumizle-inner {
+  max-width: 700px;
+  margin: 0 auto;
+}
 
 /* ── Newsletter ── */
 .newsletter-section {
@@ -430,8 +507,16 @@ onMounted(() => {
   color: var(--color-primary-dark);
   margin-bottom: 0.2rem;
 }
-.newsletter-text p { font-size: 0.85rem; color: var(--color-text-soft); }
-.newsletter-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.newsletter-text p {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+.newsletter-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .newsletter-input {
   padding: 0.6rem 1rem;
   border: 1.5px solid var(--color-primary-light);
@@ -444,8 +529,14 @@ onMounted(() => {
   background: white;
   color: var(--color-text);
 }
-.newsletter-input:focus { border-color: var(--color-primary); }
-.newsletter-confirm { color: var(--color-success); font-weight: 700; font-size: 0.95rem; }
+.newsletter-input:focus {
+  border-color: var(--color-primary);
+}
+.newsletter-confirm {
+  color: var(--color-success);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
 
 /* ── Boutons ── */
 .btn {
@@ -463,7 +554,10 @@ onMounted(() => {
   color: white;
   box-shadow: var(--shadow-sm);
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
 
 /* ── Footer ── */
 .app-footer {
@@ -477,15 +571,31 @@ onMounted(() => {
 
 /* ── Mobile ── */
 @media (max-width: 600px) {
-  .newsletter-inner { flex-direction: column; text-align: center; }
-  .newsletter-form  { justify-content: center; width: 100%; }
-  .newsletter-input { width: 100%; max-width: 280px; }
+  .newsletter-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+  .newsletter-form {
+    justify-content: center;
+    width: 100%;
+  }
+  .newsletter-input {
+    width: 100%;
+    max-width: 280px;
+  }
 }
 @media (max-width: 480px) {
-  .practice-grid { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
-  .practice-card { padding: 0.6rem 0.5rem; }
+  .practice-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+  }
+  .practice-card {
+    padding: 0.6rem 0.5rem;
+  }
 }
 @media (max-width: 380px) {
-  .practice-grid { grid-template-columns: 1fr 1fr; }
+  .practice-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

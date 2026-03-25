@@ -46,7 +46,7 @@
             <h3>Puzzle résolu !</h3>
             <p>
               Vous avez maîtrisé toutes les techniques pour résoudre un niveau
-              Coeurzzle.
+              Kuzzle.
             </p>
             <button class="tuto-btn tuto-btn--start" @click="handleClose">
               ❤️ Jouer maintenant !
