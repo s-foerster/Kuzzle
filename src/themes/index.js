@@ -406,7 +406,7 @@ export const THEMES = [
   // ── Humour & Troll ────────────────────────────────────────────────────────
   {
     id: 'poop',
-    name: 'Caca 💩',
+    name: 'Caca',
     emoji: '💩',
     icon: PoopIcon,
     premium: true,

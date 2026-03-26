@@ -150,28 +150,18 @@
           </button>
         </div>
 
-        <!-- Nudge premium thèmes -->
-        <Transition name="nudge-slide">
-          <div v-if="themePremiumNudge" class="theme-nudge-banner">
-            <span class="theme-nudge-icon">⭐</span>
-            <div class="theme-nudge-text">
-              <strong>Fonctionnalité Premium</strong>
-              <span>Les thèmes sont réservés aux membres Pass Premium.</span>
+        <!-- Popup premium thèmes -->
+        <Transition name="modal-pop">
+          <div v-if="themePremiumNudge" class="theme-nudge-overlay" @click.self="themePremiumNudge = false">
+            <div class="theme-nudge-modal">
+              <div class="theme-nudge-modal-icon">⭐</div>
+              <h3 class="theme-nudge-modal-title">Fonctionnalité Premium</h3>
+              <p class="theme-nudge-modal-desc">Les thèmes sont réservés aux membres <strong>Pass Premium</strong>. Débloquez tous les thèmes et bien plus encore !</p>
+              <button class="btn btn-premium" @click="handleCheckout" :disabled="subscriptionLoading">
+                {{ subscriptionLoading ? '…' : 'Obtenir le Pass Premium' }}
+              </button>
+              <button class="theme-nudge-modal-close" @click="themePremiumNudge = false">Non merci</button>
             </div>
-            <button
-              class="btn btn-premium btn-sm"
-              @click="handleCheckout"
-              :disabled="subscriptionLoading"
-            >
-              {{ subscriptionLoading ? "…" : "Obtenir le Pass" }}
-            </button>
-            <button
-              class="theme-nudge-close"
-              @click="themePremiumNudge = false"
-              aria-label="Fermer"
-            >
-              ✕
-            </button>
           </div>
         </Transition>
       </div>
@@ -1113,59 +1103,80 @@ onMounted(() => {
   line-height: 1;
 }
 
-/* Nudge premium thèmes */
-.theme-nudge-banner {
+/* Popup premium thèmes */
+.theme-nudge-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 500;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding: 0.85rem 1rem;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border: 1.5px solid #f59e0b;
-  border-radius: var(--radius-md);
-  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
+  justify-content: center;
+  padding: 1rem;
 }
-.theme-nudge-icon {
-  font-size: 1.3rem;
-  flex-shrink: 0;
-}
-.theme-nudge-text {
-  flex: 1;
+.theme-nudge-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.22);
+  padding: 2rem 1.5rem 1.5rem;
+  max-width: 360px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  font-size: 0.88rem;
-  color: #78350f;
-  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
 }
-.theme-nudge-text strong {
-  font-size: 0.92rem;
-  color: #92400e;
+.theme-nudge-modal-icon {
+  font-size: 2.5rem;
+  line-height: 1;
 }
-.theme-nudge-close {
+.theme-nudge-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0;
+}
+.theme-nudge-modal-desc {
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+.theme-nudge-modal .btn-premium {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+.theme-nudge-modal-close {
   background: transparent;
   border: none;
-  color: #b45309;
-  font-size: 0.9rem;
+  color: var(--color-text-soft);
+  font-size: 0.85rem;
   cursor: pointer;
-  padding: 0.2rem 0.3rem;
-  flex-shrink: 0;
+  font-family: var(--font-family);
+  padding: 0.3rem;
   opacity: 0.7;
   transition: opacity 0.15s;
 }
-.theme-nudge-close:hover {
+.theme-nudge-modal-close:hover {
   opacity: 1;
 }
-.nudge-slide-enter-active,
-.nudge-slide-leave-active {
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+.modal-pop-enter-active,
+.modal-pop-leave-active {
+  transition: opacity 0.2s ease;
 }
-.nudge-slide-enter-from,
-.nudge-slide-leave-to {
+.modal-pop-enter-active .theme-nudge-modal,
+.modal-pop-leave-active .theme-nudge-modal {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.modal-pop-enter-from,
+.modal-pop-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
+}
+.modal-pop-enter-from .theme-nudge-modal,
+.modal-pop-leave-to .theme-nudge-modal {
+  transform: scale(0.92);
+  opacity: 0;
 }
 
 /* ── Header profil ── */
