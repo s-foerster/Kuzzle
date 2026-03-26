@@ -123,7 +123,7 @@
             }"
             @click="
               theme.premium && !authStore.isPremium
-                ? handleCheckout()
+                ? showThemePremiumNudge()
                 : themeComposable.setTheme(theme.id)
             "
           >
@@ -149,6 +149,31 @@
             >
           </button>
         </div>
+
+        <!-- Nudge premium thèmes -->
+        <Transition name="nudge-slide">
+          <div v-if="themePremiumNudge" class="theme-nudge-banner">
+            <span class="theme-nudge-icon">⭐</span>
+            <div class="theme-nudge-text">
+              <strong>Fonctionnalité Premium</strong>
+              <span>Les thèmes sont réservés aux membres Pass Premium.</span>
+            </div>
+            <button
+              class="btn btn-premium btn-sm"
+              @click="handleCheckout"
+              :disabled="subscriptionLoading"
+            >
+              {{ subscriptionLoading ? "…" : "Obtenir le Pass" }}
+            </button>
+            <button
+              class="theme-nudge-close"
+              @click="themePremiumNudge = false"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
+          </div>
+        </Transition>
       </div>
 
       <!-- ── Nom d'utilisateur ──────────────────────────────────────────── -->
@@ -495,6 +520,16 @@ const {
   error: subscriptionError,
 } = useSubscription();
 const paymentSuccess = ref(false);
+const themePremiumNudge = ref(false);
+let themePremiumNudgeTimer = null;
+
+function showThemePremiumNudge() {
+  themePremiumNudge.value = true;
+  clearTimeout(themePremiumNudgeTimer);
+  themePremiumNudgeTimer = setTimeout(() => {
+    themePremiumNudge.value = false;
+  }, 6000);
+}
 
 async function handleCheckout() {
   await startCheckout();
@@ -1076,6 +1111,61 @@ onMounted(() => {
   right: 0.4rem;
   font-size: 0.72rem;
   line-height: 1;
+}
+
+/* Nudge premium thèmes */
+.theme-nudge-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1.5px solid #f59e0b;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
+}
+.theme-nudge-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.theme-nudge-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.88rem;
+  color: #78350f;
+  min-width: 0;
+}
+.theme-nudge-text strong {
+  font-size: 0.92rem;
+  color: #92400e;
+}
+.theme-nudge-close {
+  background: transparent;
+  border: none;
+  color: #b45309;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.theme-nudge-close:hover {
+  opacity: 1;
+}
+.nudge-slide-enter-active,
+.nudge-slide-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.nudge-slide-enter-from,
+.nudge-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* ── Header profil ── */
