@@ -259,11 +259,15 @@
                 (aujourd’hui + 2 jours).
               </p>
               <ul class="paywall-perks">
-                <li>✨ Accès à tous les puzzles passés</li>
-                <li>💡 Indices illimités</li>
-                <li>🎨 Thèmes exclusifs</li>
-                <li>💛 Soutenir le développement de Kuzzle</li>
+                <li>✨ Accès à tout le contenu disponible</li>
+                <li>💛 Soutenir le développement de Rubih Games</li>
               </ul>
+              <!--
+                <li>✨ Accès à tout le contenu disponible</li>
+                <li>💡                 <li>PLACEHOLDER_INDICES</li>
+                <li>🎨 Thèmes exclusifs</li>
+                <li>💛 Soutenir le développement de Rubih Games</li>
+              -->
               <p v-if="paywallError" class="paywall-error">
                 {{ paywallError }}
               </p>

@@ -545,6 +545,7 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, error: 'Token invalide ou expiré' });
   }
   req.userId = user.id;
+  req.userEmail = user.email;
   next();
 }
 
@@ -595,11 +596,16 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       // façon fiable de récupérer cet identifiant.
       metadata: { supabase_user_id: req.userId },
       subscription_data: { metadata: { supabase_user_id: req.userId } },
+      allow_promotion_codes: true,
     };
 
     // Réutiliser le customer Stripe existant si disponible
     if (profile?.stripe_customer_id) {
       sessionParams.customer = profile.stripe_customer_id;
+    } else if (req.userEmail) {
+      // Pré-remplir l'email uniquement si pas de customer existant
+      // (customer et customer_email sont mutuellement exclusifs chez Stripe)
+      sessionParams.customer_email = req.userEmail;
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);

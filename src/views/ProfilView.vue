@@ -63,11 +63,15 @@
             </div>
           </div>
           <ul class="premium-features">
-            <li>✨ Accès à l’archive complète (tous les puzzles passés)</li>
+            <li>✨ Accès à tout le contenu disponible</li>
+            <li>💛 Soutenir le développement de Rubih Games</li>
+          </ul>
+          <!--
+            <li>✨ Accès à tout le contenu disponible</li>
             <li>💡 Indices illimités</li>
             <li>🎨 Thèmes et couleurs exclusifs</li>
-            <li>💛 Soutenir le développement de Kuzzle</li>
-          </ul>
+            <li>💛 Soutenir le développement de Rubih Games</li>
+          -->
           <p v-if="subscriptionError" class="field-error">
             {{ subscriptionError }}
           </p>
