@@ -1,27 +1,89 @@
-<!-- Œuf de Pâques en chocolat — placeholder: remplacez le contenu du <svg> par votre SVG final -->
+<!-- Œuf de Pâques en chocolat brillant avec glaçage coloré -->
 <template>
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon icon-theme">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    class="icon icon-theme"
+  >
     <defs>
-      <linearGradient id="eggGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color: #ff9a9e; stop-opacity: 1" />
-        <stop offset="100%" style="stop-color: #fecfef; stop-opacity: 1" />
-      </linearGradient>
+      <!-- Dégradé radial pour donner un effet 3D sphérique au chocolat -->
+      <radialGradient id="choc3D" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#9E6A55" />
+        <stop offset="40%" stop-color="#6B4231" />
+        <stop offset="100%" stop-color="#3A2015" />
+      </radialGradient>
+
+      <!-- Ombre portée douce pour détacher l'œuf de la grille du puzzle -->
       <filter id="eggShadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(255, 154, 158, 0.4)" />
+        <feDropShadow
+          dx="0"
+          dy="1.5"
+          stdDeviation="1.5"
+          flood-color="#000000"
+          flood-opacity="0.3"
+        />
       </filter>
-      <pattern id="zigzag" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-        <path d="M0 6 L4 2 L8 6 L12 2 L16 6 L20 2 L24 6" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="M0 18 L4 14 L8 18 L12 14 L16 18 L20 14 L24 18" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="12" cy="10" r="1.5" fill="rgba(255,255,255,0.7)" />
-        <circle cx="6" cy="10" r="1.5" fill="rgba(255,255,255,0.7)" />
-        <circle cx="18" cy="10" r="1.5" fill="rgba(255,255,255,0.7)" />
-      </pattern>
+
+      <!-- Forme parfaite de l'œuf utilisée comme masque pour que les décorations ne débordent pas -->
       <clipPath id="eggClip">
-        <path d="M12 2C8.5 2 5 7 5 13C5 18 8 22 12 22C16 22 19 18 19 13C19 7 15.5 2 12 2Z" />
+        <path
+          d="M12 2 C 7 2 4 8 4 14 C 4 19 7.5 22 12 22 C 16.5 22 20 19 20 14 C 20 8 17 2 12 2 Z"
+        />
       </clipPath>
     </defs>
-    <path fill="url(#eggGradient)" filter="url(#eggShadow)" d="M12 2C8.5 2 5 7 5 13C5 18 8 22 12 22C16 22 19 18 19 13C19 7 15.5 2 12 2Z" />
-    <rect x="0" y="0" width="24" height="24" fill="url(#zigzag)" clip-path="url(#eggClip)" />
-    <path fill="rgba(255,255,255,0.25)" d="M8.5 5.5C7.2 7 6 9.5 6 12C6 13 6.1 14 6.3 15C5.8 13.8 5.5 12.5 5.5 11.5C5.5 8 7.5 4.5 9.5 3C9 3.5 8.7 4.5 8.5 5.5Z" />
+
+    <!-- Ombre de l'œuf -->
+    <path
+      d="M12 2 C 7 2 4 8 4 14 C 4 19 7.5 22 12 22 C 16.5 22 20 19 20 14 C 20 8 17 2 12 2 Z"
+      fill="none"
+      filter="url(#eggShadow)"
+    />
+
+    <!-- Base en chocolat -->
+    <path
+      d="M12 2 C 7 2 4 8 4 14 C 4 19 7.5 22 12 22 C 16.5 22 20 19 20 14 C 20 8 17 2 12 2 Z"
+      fill="url(#choc3D)"
+    />
+
+    <!-- Groupe des décorations (Glaçage) contraint à l'intérieur de l'œuf -->
+    <g clip-path="url(#eggClip)">
+      <!-- Glaçage Zigzag Rose (Haut) -->
+      <path
+        d="M -2 9 L 4 4 L 10 9 L 16 4 L 22 9 L 28 4"
+        fill="none"
+        stroke="#FF6B8B"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+
+      <!-- Bande Dorée (Milieu) -->
+      <rect x="0" y="11" width="24" height="4.5" fill="#FFD700" />
+
+      <!-- Pépites de chocolat incrustées dans la bande dorée -->
+      <circle cx="6" cy="13.25" r="1.25" fill="#3A2015" />
+      <circle cx="12" cy="13.25" r="1.25" fill="#3A2015" />
+      <circle cx="18" cy="13.25" r="1.25" fill="#3A2015" />
+
+      <!-- Glaçage Vague Cyan (Bas) -->
+      <path
+        d="M -2 18.5 Q 4 16 10 18.5 T 22 18.5 T 34 18.5"
+        fill="none"
+        stroke="#00E5FF"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      />
+    </g>
+
+    <!-- Reflets brillants pour l'aspect lisse/plastique/chocolat tempéré -->
+    <path
+      d="M 7.5 5.5 Q 5 9 6 13"
+      fill="none"
+      stroke="#FFFFFF"
+      stroke-width="1.2"
+      stroke-linecap="round"
+      opacity="0.4"
+    />
+    <circle cx="9" cy="4" r="0.8" fill="#FFFFFF" opacity="0.5" />
   </svg>
 </template>

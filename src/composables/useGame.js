@@ -49,6 +49,10 @@ export function useGame() {
   const isTimerStarted = ref(false);
   let timerInterval = null;
 
+  // Pause silencieuse externe (ex: modale auth ouverte) — ne déclenche pas l'UI de pause.
+  const _timerFrozen = ref(false);
+  function freezeTimer(frozen) { _timerFrozen.value = frozen; }
+
   // Charger un puzzle pré-généré (practice) directement sans API
   function initPracticePuzzle(practiceData) {
     isLoading.value = true;
@@ -235,9 +239,12 @@ export function useGame() {
     isPaused.value = false;
     
     timerInterval = setInterval(() => {
-      if (!isPaused.value && !isWon.value) {
+      if (!isPaused.value && !_timerFrozen.value && !isWon.value) {
         elapsedTime.value++;
-        saveGameState();
+        // Ne pas appeler saveGameState() ici : écrire en localStorage toutes les
+        // secondes est inutile et, combiné à un overlay actif, force un repaint
+        // coûteux. La sauvegarde du temps écoulé est déjà assurée à la pause,
+        // à la victoire et à chaque action utilisateur (handleCellClick, etc.).
       }
     }, 1000);
   }
@@ -402,10 +409,10 @@ export function useGame() {
     });
   });
 
-  // Sauvegarder automatiquement quand l'état change
-  watch(gameState, () => {
-    saveGameState();
-  }, { deep: true });
+  // Toutes les mutations de gameState (handleCellClick, handleCellDrag, undo,
+  // resetGameState, fillWithSolution) appellent déjà saveGameState() explicitement.
+  // Le watcher deep ci-dessous est donc redondant ET coûteux (surveille 100 cellules)
+  // → supprimé pour éviter une double sérialisation et l'overhead réactif profond.
 
   // ── Statistiques par niveau (persistées séparément) ──────────────────────────
   function getCurrentLevelId() {
@@ -499,6 +506,8 @@ export function useGame() {
     isConstraintComplete,
     getZoneName,
     togglePause,
+    freezeTimer,
+    saveGameState,
     getLevelStats,
     saveLevelStats,
 

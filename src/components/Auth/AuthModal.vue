@@ -150,9 +150,10 @@ async function handleGoogle() {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* Fond semi-opaque simple : évite le backdrop-filter: blur() qui force
+     le navigateur à re-flouter l'intégralité du viewport à chaque repaint
+     (notamment à chaque tick du timer de jeu, soit 1×/s). */
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* ── Carte ──────────────────────────────────────────────────────────────────── */

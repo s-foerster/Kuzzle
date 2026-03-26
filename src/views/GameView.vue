@@ -393,9 +393,22 @@ const {
   checkErrors,
   fillWithSolution,
   togglePause,
+  freezeTimer,
+  saveGameState,
   getLevelStats,
   saveLevelStats,
 } = useGame();
+
+// ── Gel silencieux du timer pendant les modales ───────────────────────────────
+// Quand la modale auth ou le paywall est ouvert, le timer est gelé sans
+// déclencher l'UI de pause, pour éviter les mises à jour DOM inutiles.
+function _freezeIfActive(shouldFreeze) {
+  if (!isTimerStarted.value || isWon.value) return;
+  freezeTimer(shouldFreeze);
+  if (shouldFreeze) saveGameState(); // persiste le temps atteint à l'ouverture
+}
+
+watch(() => authStore.authModalOpen, _freezeIfActive);
 
 // ── Mode practice ────────────────────────────────────────────────────────────
 const isPracticeMode = ref(false);
@@ -643,6 +656,8 @@ function isDayLocked(dateKey) {
 // ── Modal Paywall ─────────────────────────────────────────────────────────────
 const showPremiumPaywall = ref(false);
 const paywallDateLabel = ref("");
+// Geler le timer pendant que le paywall est affiché (même logique que authModal)
+watch(showPremiumPaywall, _freezeIfActive);
 
 async function handlePaywallCheckout() {
   if (!authStore.isLoggedIn) {
@@ -1534,8 +1549,9 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  background: rgba(10, 8, 20, 0.6);
-  backdrop-filter: blur(6px);
+  /* Fond opaque simple : même raison que AuthModal — backdrop-filter: blur()
+     re-floute le viewport entier à chaque repaint (tick timer, etc.). */
+  background: rgba(10, 8, 20, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
