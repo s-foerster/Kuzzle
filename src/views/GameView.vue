@@ -259,14 +259,16 @@
                 (aujourd’hui + 2 jours).
               </p>
               <ul class="paywall-perks">
-                <li>✨ Accès à tout le contenu disponible</li>
-                <li>💛 Soutenir le développement de Rubih Games</li>
+                <li>
+                  ✨ Débloquez plus de 1000 puzzles de logique en illimité !
+                </li>
+                <li>💛 Soutenir le développement de Rubih Games !</li>
               </ul>
               <!--
-                <li>✨ Accès à tout le contenu disponible</li>
+                <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
                 <li>💡                 <li>PLACEHOLDER_INDICES</li>
                 <li>🎨 Thèmes exclusifs</li>
-                <li>💛 Soutenir le développement de Rubih Games</li>
+                <li>💛 Soutenir le développement de Rubih Games !</li>
               -->
               <p v-if="paywallError" class="paywall-error">
                 {{ paywallError }}

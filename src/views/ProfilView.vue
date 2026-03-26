@@ -63,14 +63,14 @@
             </div>
           </div>
           <ul class="premium-features">
-            <li>✨ Accès à tout le contenu disponible</li>
-            <li>💛 Soutenir le développement de Rubih Games</li>
+            <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
+            <li>💛 Soutenir le développement de Rubih Games !</li>
           </ul>
           <!--
-            <li>✨ Accès à tout le contenu disponible</li>
+            <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
             <li>💡 Indices illimités</li>
             <li>🎨 Thèmes et couleurs exclusifs</li>
-            <li>💛 Soutenir le développement de Rubih Games</li>
+            <li>💛 Soutenir le développement de Rubih Games !</li>
           -->
           <p v-if="subscriptionError" class="field-error">
             {{ subscriptionError }}
