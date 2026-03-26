@@ -32,6 +32,7 @@
 import { ref, computed } from "vue";
 import Cell from "./Cell.vue";
 import ZoneOverlay from "./ZoneOverlay.vue";
+import { useTheme } from "../composables/useTheme.js";
 
 const props = defineProps({
   gameState: {
@@ -179,6 +180,8 @@ const allCells = computed(() => {
   return cells;
 });
 
+const { zoneStyle } = useTheme();
+
 const gridStyle = computed(() => ({
   display: "grid",
   gridTemplateColumns: `repeat(${props.gridSize}, 1fr)`,
@@ -191,6 +194,7 @@ const gridStyle = computed(() => ({
   borderRadius: "10px",
   overflow: "hidden",
   border: "3px solid #2c2c3a",
+  ...zoneStyle.value,
 }));
 </script>
 

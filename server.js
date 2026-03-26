@@ -597,6 +597,7 @@ app.post('/api/stripe/create-checkout-session', requireAuth, async (req, res) =>
       metadata: { supabase_user_id: req.userId },
       subscription_data: { metadata: { supabase_user_id: req.userId } },
       allow_promotion_codes: true,
+      payment_method_collection: 'if_required',
     };
 
     // Réutiliser le customer Stripe existant si disponible

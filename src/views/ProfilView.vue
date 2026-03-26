@@ -111,6 +111,44 @@
         </template>
       </div>
 
+      <!-- ── Apparence (thème) ─────────────────────────────────────────── -->
+      <div class="profil-section">
+        <h2 class="section-title">Apparence</h2>
+        <p class="section-desc">
+          Choisissez l'icône affichée à la place des cœurs dans la grille.
+        </p>
+
+        <PremiumGate>
+          <div class="theme-grid">
+            <button
+              v-for="theme in themeComposable.allThemes"
+              :key="theme.id"
+              class="theme-card"
+              :class="{
+                'theme-card--active':
+                  themeComposable.activeTheme.value.id === theme.id,
+                'theme-card--seasonal':
+                  themeComposable.suggestedTheme.value?.id === theme.id,
+              }"
+              @click="themeComposable.setTheme(theme.id)"
+            >
+              <span class="theme-card-emoji">{{ theme.emoji }}</span>
+              <span class="theme-card-name">{{ theme.name }}</span>
+              <span
+                v-if="themeComposable.suggestedTheme.value?.id === theme.id"
+                class="theme-card-badge"
+                >Saisonnier</span
+              >
+              <span
+                v-if="themeComposable.activeTheme.value.id === theme.id"
+                class="theme-card-check"
+                >✓</span
+              >
+            </button>
+          </div>
+        </PremiumGate>
+      </div>
+
       <!-- ── Nom d'utilisateur ──────────────────────────────────────────── -->
       <div class="profil-section">
         <h2 class="section-title">Nom d'utilisateur</h2>
@@ -196,77 +234,79 @@
         </div>
 
         <div v-else class="stats-content">
-          <!-- Hearts -->
-          <div class="game-stats-block">
-            <div class="game-stats-label">
-              <span class="game-dot game-dot--hearts"></span> Kuzzle
-            </div>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-value">{{ stats.heartsGames }}</div>
-                <div class="stat-label">Parties jouées</div>
+          <PremiumGate :blur="true" label="vos statistiques">
+            <!-- Hearts -->
+            <div class="game-stats-block">
+              <div class="game-stats-label">
+                <span class="game-dot game-dot--hearts"></span> Kuzzle
               </div>
-              <div class="stat-card stat-card--highlight">
-                <div class="stat-value">{{ stats.bestHearts || "—" }}</div>
-                <div class="stat-label">Meilleur temps</div>
-              </div>
-              <div
-                class="stat-card"
-                :class="{ 'stat-card--streak': streaks.hearts.current > 0 }"
-              >
-                <div class="stat-value">
-                  {{ streaks.hearts.current
-                  }}<span
-                    v-if="streaks.hearts.current > 1"
-                    class="streak-flame"
-                  >
-                    🔥</span
-                  >
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-value">{{ stats.heartsGames }}</div>
+                  <div class="stat-label">Parties jouées</div>
                 </div>
-                <div class="stat-label">Streak actuel</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value">{{ streaks.hearts.best }}</div>
-                <div class="stat-label">Meilleur streak</div>
+                <div class="stat-card stat-card--highlight">
+                  <div class="stat-value">{{ stats.bestHearts || "—" }}</div>
+                  <div class="stat-label">Meilleur temps</div>
+                </div>
+                <div
+                  class="stat-card"
+                  :class="{ 'stat-card--streak': streaks.hearts.current > 0 }"
+                >
+                  <div class="stat-value">
+                    {{ streaks.hearts.current
+                    }}<span
+                      v-if="streaks.hearts.current > 1"
+                      class="streak-flame"
+                    >
+                      🔥</span
+                    >
+                  </div>
+                  <div class="stat-label">Streak actuel</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">{{ streaks.hearts.best }}</div>
+                  <div class="stat-label">Meilleur streak</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Lumizle -->
-          <div class="game-stats-block">
-            <div class="game-stats-label">
-              <span class="game-dot game-dot--lumizle"></span> Lumizle
-            </div>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-value">{{ stats.lumizleGames }}</div>
-                <div class="stat-label">Parties jouées</div>
+            <!-- Lumizle -->
+            <div class="game-stats-block">
+              <div class="game-stats-label">
+                <span class="game-dot game-dot--lumizle"></span> Lumizle
               </div>
-              <div class="stat-card stat-card--highlight">
-                <div class="stat-value">{{ stats.bestLumizle || "—" }}</div>
-                <div class="stat-label">Meilleur temps</div>
-              </div>
-              <div
-                class="stat-card"
-                :class="{ 'stat-card--streak': streaks.lumizle.current > 0 }"
-              >
-                <div class="stat-value">
-                  {{ streaks.lumizle.current
-                  }}<span
-                    v-if="streaks.lumizle.current > 1"
-                    class="streak-flame"
-                  >
-                    🔥</span
-                  >
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-value">{{ stats.lumizleGames }}</div>
+                  <div class="stat-label">Parties jouées</div>
                 </div>
-                <div class="stat-label">Streak actuel</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value">{{ streaks.lumizle.best }}</div>
-                <div class="stat-label">Meilleur streak</div>
+                <div class="stat-card stat-card--highlight">
+                  <div class="stat-value">{{ stats.bestLumizle || "—" }}</div>
+                  <div class="stat-label">Meilleur temps</div>
+                </div>
+                <div
+                  class="stat-card"
+                  :class="{ 'stat-card--streak': streaks.lumizle.current > 0 }"
+                >
+                  <div class="stat-value">
+                    {{ streaks.lumizle.current
+                    }}<span
+                      v-if="streaks.lumizle.current > 1"
+                      class="streak-flame"
+                    >
+                      🔥</span
+                    >
+                  </div>
+                  <div class="stat-label">Streak actuel</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">{{ streaks.lumizle.best }}</div>
+                  <div class="stat-label">Meilleur streak</div>
+                </div>
               </div>
             </div>
-          </div>
+          </PremiumGate>
         </div>
       </div>
 
@@ -280,64 +320,66 @@
         </div>
 
         <template v-else>
-          <!-- Tabs filtre -->
-          <div class="history-tabs" role="tablist">
-            <button
-              v-for="tab in historyTabs"
-              :key="tab.value"
-              role="tab"
-              :aria-selected="historyFilter === tab.value"
-              class="history-tab"
-              :class="{ 'history-tab--active': historyFilter === tab.value }"
-              @click="historyFilter = tab.value"
-            >
-              {{ tab.label }}
-              <span class="tab-count">{{ tabCount(tab.value) }}</span>
-            </button>
-          </div>
-
-          <!-- Liste vide -->
-          <div v-if="filteredResults.length === 0" class="empty-state">
-            <p class="empty-icon">🎮</p>
-            <p>Aucune partie enregistrée.</p>
-            <p class="empty-sub">Jouez un puzzle pour commencer !</p>
-          </div>
-
-          <!-- Résultats -->
-          <div v-else class="results-list">
-            <div v-for="r in visibleResults" :key="r.id" class="result-row">
-              <span
-                class="result-badge"
-                :class="`result-badge--${r.game_type}`"
+          <PremiumGate :blur="true" label="votre historique">
+            <!-- Tabs filtre -->
+            <div class="history-tabs" role="tablist">
+              <button
+                v-for="tab in historyTabs"
+                :key="tab.value"
+                role="tab"
+                :aria-selected="historyFilter === tab.value"
+                class="history-tab"
+                :class="{ 'history-tab--active': historyFilter === tab.value }"
+                @click="historyFilter = tab.value"
               >
-                {{ r.game_type === "hearts" ? "Kuzzle" : "Lumizle" }}
-              </span>
-              <span class="result-date">{{ formatDate(r.puzzle_date) }}</span>
-              <div class="result-meta">
-                <span class="result-time">{{
-                  formatSeconds(r.time_seconds)
-                }}</span>
-                <span
-                  v-if="r.verify_count != null && r.game_type === 'hearts'"
-                  class="result-verify"
-                >
-                  {{ r.verify_count }} vérif.
-                </span>
-              </div>
-              <span class="result-check">✓</span>
+                {{ tab.label }}
+                <span class="tab-count">{{ tabCount(tab.value) }}</span>
+              </button>
             </div>
-          </div>
 
-          <!-- Voir plus -->
-          <button v-if="hasMore" class="btn-load-more" @click="showMore">
-            Voir {{ Math.min(20, filteredResults.length - displayCount) }} de
-            plus
-            <span class="load-more-total"
-              >({{ filteredResults.length - displayCount }} restant{{
-                filteredResults.length - displayCount > 1 ? "s" : ""
-              }})</span
-            >
-          </button>
+            <!-- Liste vide -->
+            <div v-if="filteredResults.length === 0" class="empty-state">
+              <p class="empty-icon">🎮</p>
+              <p>Aucune partie enregistrée.</p>
+              <p class="empty-sub">Jouez un puzzle pour commencer !</p>
+            </div>
+
+            <!-- Résultats -->
+            <div v-else class="results-list">
+              <div v-for="r in visibleResults" :key="r.id" class="result-row">
+                <span
+                  class="result-badge"
+                  :class="`result-badge--${r.game_type}`"
+                >
+                  {{ r.game_type === "hearts" ? "Kuzzle" : "Lumizle" }}
+                </span>
+                <span class="result-date">{{ formatDate(r.puzzle_date) }}</span>
+                <div class="result-meta">
+                  <span class="result-time">{{
+                    formatSeconds(r.time_seconds)
+                  }}</span>
+                  <span
+                    v-if="r.verify_count != null && r.game_type === 'hearts'"
+                    class="result-verify"
+                  >
+                    {{ r.verify_count }} vérif.
+                  </span>
+                </div>
+                <span class="result-check">✓</span>
+              </div>
+            </div>
+
+            <!-- Voir plus -->
+            <button v-if="hasMore" class="btn-load-more" @click="showMore">
+              Voir {{ Math.min(20, filteredResults.length - displayCount) }} de
+              plus
+              <span class="load-more-total"
+                >({{ filteredResults.length - displayCount }} restant{{
+                  filteredResults.length - displayCount > 1 ? "s" : ""
+                }})</span
+              >
+            </button>
+          </PremiumGate>
         </template>
       </div>
 
@@ -418,11 +460,14 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth.js";
 import { useSubscription } from "../composables/useSubscription.js";
+import { useTheme } from "../composables/useTheme.js";
 import { supabase } from "../lib/supabase.js";
+import PremiumGate from "../components/PremiumGate.vue";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const themeComposable = useTheme();
 
 // ── Initiales avatar (fallback) ────────────────────────────────────────────
 const initials = computed(() => {
@@ -925,7 +970,78 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text-soft);
+  margin: 0 0 0.5rem;
+}
+.section-desc {
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
   margin: 0 0 1rem;
+}
+
+/* ── Grille de thèmes ── */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.65rem;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.75rem 0.5rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition:
+    border-color 0.18s,
+    background 0.18s,
+    transform 0.12s;
+  position: relative;
+}
+.theme-card:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-bg);
+  transform: translateY(-2px);
+}
+.theme-card--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+.theme-card--seasonal {
+  border-color: #f59e0b;
+}
+
+.theme-card-emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.theme-card-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+}
+.theme-card-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+}
+.theme-card-check {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--color-primary);
 }
 
 /* ── Header profil ── */

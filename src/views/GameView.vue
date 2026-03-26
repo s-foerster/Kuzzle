@@ -57,12 +57,14 @@
           </div>
           <!-- Classement intégré dans la carte victoire -->
           <div class="victory-leaderboard">
-            <LeaderboardPanel
-              v-if="currentLevelId"
-              :puzzle-date="currentLevelId"
-              :refresh-trigger="leaderboardRefreshTrigger"
-              game-type="hearts"
-            />
+            <PremiumGate :blur="true" label="le classement">
+              <LeaderboardPanel
+                v-if="currentLevelId"
+                :puzzle-date="currentLevelId"
+                :refresh-trigger="leaderboardRefreshTrigger"
+                game-type="hearts"
+              />
+            </PremiumGate>
           </div>
         </div>
       </Transition>
@@ -259,17 +261,19 @@
                 (aujourd’hui + 2 jours).
               </p>
               <ul class="paywall-perks">
-                <li>
-                  ✨ Débloquez plus de 1000 puzzles de logique en illimité !
+                <li>✨ Accès à tous les puzzles passés</li>
+                <li>🏆 Classement, statistiques et historique</li>
+                <li>💛 Soutenir le développement de Kuzzle</li>
+              </ul>
+              <!--JUNK_BLOCK_OPENé !
                 </li>
                 <li>💛 Soutenir le développement de Rubih Games !</li>
               </ul>
-              <!--
-                <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
+              <!--JUNK_COMMENT_WRAP<li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
                 <li>💡                 <li>PLACEHOLDER_INDICES</li>
                 <li>🎨 Thèmes exclusifs</li>
                 <li>💛 Soutenir le développement de Rubih Games !</li>
-              -->
+              JUNK_BLOCK_CLOSE-->
               <p v-if="paywallError" class="paywall-error">
                 {{ paywallError }}
               </p>
@@ -353,6 +357,7 @@ import { useRouter } from "vue-router";
 import GameGrid from "../components/GameGrid.vue";
 import HowToPlayModal from "../components/HowToPlay/HowToPlayModal.vue";
 import LeaderboardPanel from "../components/LeaderboardPanel.vue";
+import PremiumGate from "../components/PremiumGate.vue";
 import { useGame } from "../composables/useGame.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -673,6 +678,11 @@ function closeCalPicker() {
 }
 
 function toggleCalPicker() {
+  if (!authStore.isPremium) {
+    paywallDateLabel.value = "l'historique complet";
+    showPremiumPaywall.value = true;
+    return;
+  }
   if (isCalPickerOpen.value) {
     closeCalPicker();
   } else {

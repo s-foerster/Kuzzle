@@ -13,51 +13,7 @@
   >
     <Transition name="icon-pop">
       <div class="cell-content" v-if="state !== 0" :key="state">
-        <svg
-          v-if="state === 2"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          class="icon icon-heart"
-        >
-          <defs>
-            <linearGradient
-              id="heartGradient"
-              x1="0%"
-              y1="0%"
-              x2="100%"
-              y2="100%"
-            >
-              <stop offset="0%" style="stop-color: #ff5252; stop-opacity: 1" />
-              <stop
-                offset="100%"
-                style="stop-color: #d50000; stop-opacity: 1"
-              />
-            </linearGradient>
-            <filter
-              id="heartShadow"
-              x="-20%"
-              y="-20%"
-              width="140%"
-              height="140%"
-            >
-              <feDropShadow
-                dx="0"
-                dy="2"
-                stdDeviation="2"
-                flood-color="rgba(213, 0, 0, 0.3)"
-              />
-            </filter>
-          </defs>
-          <path
-            fill="url(#heartGradient)"
-            filter="url(#heartShadow)"
-            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-          />
-          <path
-            fill="rgba(255,255,255,0.2)"
-            d="M7.5 4C5.1 4 3 6.05 3 8.5c0 1.9.9 3.6 2.3 5.4l-.8.5C3.3 12.5 2 10.6 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09.2.24.4.5.58.78-.6-1.12-1.9-1.87-3.08-1.87z"
-          />
-        </svg>
+        <component :is="activeTheme.icon" v-if="state === 2" class="icon" />
         <svg
           v-if="state === 1"
           xmlns="http://www.w3.org/2000/svg"
@@ -85,6 +41,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { useTheme } from "../composables/useTheme.js";
 
 const props = defineProps({
   state: {
@@ -115,6 +72,8 @@ const props = defineProps({
 });
 
 defineEmits(["click"]);
+
+const { activeTheme } = useTheme();
 
 const cellClasses = computed(() => {
   return {
@@ -285,35 +244,35 @@ const ariaLabel = computed(() => {
   }
 }
 
-/* Couleurs des zones — palette chaude cohérente avec la DA rose/corail */
+/* Couleurs des zones — utilisent des variables CSS injectées par useTheme via GameGrid */
 .zone-0 {
-  --cell-bg: #fff0f2;
+  --cell-bg: var(--zone-color-0, #fff0f2);
 }
 .zone-1 {
-  --cell-bg: #fff8f0;
+  --cell-bg: var(--zone-color-1, #fff8f0);
 }
 .zone-2 {
-  --cell-bg: #fff5fa;
+  --cell-bg: var(--zone-color-2, #fff5fa);
 }
 .zone-3 {
-  --cell-bg: #f7f0ff;
+  --cell-bg: var(--zone-color-3, #f7f0ff);
 }
 .zone-4 {
-  --cell-bg: #f0f8ff;
+  --cell-bg: var(--zone-color-4, #f0f8ff);
 }
 .zone-5 {
-  --cell-bg: #f0fff5;
+  --cell-bg: var(--zone-color-5, #f0fff5);
 }
 .zone-6 {
-  --cell-bg: #fffbf0;
+  --cell-bg: var(--zone-color-6, #fffbf0);
 }
 .zone-7 {
-  --cell-bg: #fef0f0;
+  --cell-bg: var(--zone-color-7, #fef0f0);
 }
 .zone-8 {
-  --cell-bg: #f5f0ff;
+  --cell-bg: var(--zone-color-8, #f5f0ff);
 }
 .zone-9 {
-  --cell-bg: #f0fafa;
+  --cell-bg: var(--zone-color-9, #f0fafa);
 }
 </style>

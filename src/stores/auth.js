@@ -15,8 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
   const authModalInitialTab = ref('login') // 'login' | 'register'
 
   // ── Getters ─────────────────────────────────────────────────────────────
-  const isLoggedIn = computed(() => !!user.value)
-  const isPremium  = computed(() => profile.value?.is_premium ?? false)
+  const isLoggedIn      = computed(() => !!user.value)
+  const isPremium       = computed(() => profile.value?.is_premium ?? false)
+  const preferredTheme  = computed(() => profile.value?.preferred_theme ?? 'default')
   const username   = computed(() =>
     profile.value?.username
     ?? user.value?.user_metadata?.full_name
@@ -271,15 +272,24 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
+  async function setPreferredTheme(themeId) {
+    if (!supabase || !user.value) return
+    if (profile.value) profile.value.preferred_theme = themeId
+    await supabase
+      .from('profiles')
+      .update({ preferred_theme: themeId })
+      .eq('id', user.value.id)
+  }
+
   return {
     // État
     user, profile, initialized, loading, error,
     authModalOpen, authModalInitialTab,
     // Getters
-    isLoggedIn, isPremium, username, avatarUrl,
+    isLoggedIn, isPremium, preferredTheme, username, avatarUrl,
     // Actions
     init, loginWithEmail, register, loginWithGoogle, logout, updateUsername,
-    fetchProfile,
+    fetchProfile, setPreferredTheme,
     // Modal
     openAuthModal, closeAuthModal,
   }
