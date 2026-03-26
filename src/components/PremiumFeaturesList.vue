@@ -6,7 +6,7 @@
     <li>📊 Accédez à vos statistiques détaillées</li>
     <li>🏆 Comparez-vous aux autres joueurs via le classement</li>
     <li>🎨 Débloquez l'accès aux thèmes exclusifs</li>
-    <li>💛 Soutenir le développement de Rubih Games</li>
+    <li>💛 Soutenez le développement de Rubih Games</li>
   </ul>
 </template>
 

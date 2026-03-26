@@ -109,7 +109,7 @@
           Choisissez l'icône affichée à la place des cœurs dans la grille.
         </p>
 
-        <PremiumGate>
+        <PremiumGate label="les thèmes">
           <div class="theme-grid">
             <button
               v-for="theme in themeComposable.allThemes"

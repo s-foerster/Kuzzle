@@ -6,12 +6,10 @@
     </template>
     <template v-else>
       <slot name="locked">
-        <div class="premium-gate-default">
+        <button class="premium-gate-default" @click="handleCta">
           <span class="premium-gate-icon">⭐</span>
-          <p class="premium-gate-text">
-            Fonctionnalité réservée au <strong>Pass Premium</strong>.
-          </p>
-        </div>
+          <span>Pass Premium requis pour voir {{ label }}</span>
+        </button>
       </slot>
     </template>
   </template>
@@ -26,17 +24,10 @@
         <slot />
       </div>
       <div class="premium-blur-overlay">
-        <div class="premium-blur-card">
+        <button class="premium-blur-hint" @click="handleCta">
           <span class="premium-blur-icon">⭐</span>
-          <p class="premium-blur-title">Fonctionnalité Premium</p>
-          <p class="premium-blur-desc">
-            Accédez à {{ label }} en souscrivant au
-            <strong>Pass Premium</strong>.
-          </p>
-          <button class="premium-blur-cta" @click="handleCta">
-            Obtenir le Pass Premium
-          </button>
-        </div>
+          <span>Pass Premium requis pour voir {{ label }}</span>
+        </button>
       </div>
     </div>
   </template>
@@ -69,20 +60,27 @@ function handleCta() {
 .premium-gate-default {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
   background: var(--color-primary-bg, #fef3c7);
   border: 1.5px solid var(--color-primary-light, #fcd34d);
   border-radius: var(--radius-md, 8px);
-  font-size: 0.88rem;
-  color: var(--color-text, #1a1a1a);
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  color: var(--color-text-soft, #666);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.premium-gate-default:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .premium-gate-icon {
   font-size: 1.1rem;
   flex-shrink: 0;
-}
-.premium-gate-text {
-  margin: 0;
 }
 
 /* ── Mode blur ──────────────────────────────────────────────────────────── */
@@ -90,7 +88,7 @@ function handleCta() {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-lg, 12px);
-  min-height: 250px;
+  min-height: 100px;
 }
 
 .premium-blur-content {
@@ -112,16 +110,28 @@ function handleCta() {
   z-index: 10;
 }
 
-.premium-blur-card {
-  background: var(--color-bg-card, #fff);
-  border: 1.5px solid #fcd34d;
-  border-radius: var(--radius-xl, 16px);
-  padding: 2rem;
-  text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-  max-width: 400px;
-  width: 90%;
+.premium-blur-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  background: var(--color-primary-bg, #fef3c7);
+  border: 1.5px solid var(--color-primary-light, #fcd34d);
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  color: var(--color-text-soft, #666);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   animation: gate-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.2s ease;
+}
+
+.premium-blur-hint:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes gate-pop {
@@ -136,42 +146,6 @@ function handleCta() {
 }
 
 .premium-blur-icon {
-  font-size: 2.5rem;
-  display: block;
-  margin-bottom: 0.75rem;
-}
-
-.premium-blur-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--color-text, #1a1a1a);
-  margin: 0 0 0.5rem;
-}
-
-.premium-blur-desc {
-  font-size: 0.95rem;
-  color: var(--color-text-soft, #666);
-  margin: 0 0 1.25rem;
-  line-height: 1.5;
-}
-
-.premium-blur-cta {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md, 8px);
-  font-family: var(--font-family);
-  font-size: 1rem;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(245, 158, 11, 0.4);
-  transition: all 0.2s ease;
-}
-
-.premium-blur-cta:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(245, 158, 11, 0.5);
+  font-size: 1.1rem;
 }
 </style>
