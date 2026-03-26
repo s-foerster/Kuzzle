@@ -62,16 +62,7 @@
               </p>
             </div>
           </div>
-          <ul class="premium-features">
-            <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
-            <li>💛 Soutenir le développement de Rubih Games !</li>
-          </ul>
-          <!--
-            <li>✨ Débloquez plus de 1000 puzzles de logique en illimité !</li>
-            <li>💡 Indices illimités</li>
-            <li>🎨 Thèmes et couleurs exclusifs</li>
-            <li>💛 Soutenir le développement de Rubih Games !</li>
-          -->
+          <PremiumFeaturesList list-class="premium-features" />
           <p v-if="subscriptionError" class="field-error">
             {{ subscriptionError }}
           </p>
@@ -463,6 +454,7 @@ import { useSubscription } from "../composables/useSubscription.js";
 import { useTheme } from "../composables/useTheme.js";
 import { supabase } from "../lib/supabase.js";
 import PremiumGate from "../components/PremiumGate.vue";
+import PremiumFeaturesList from "../components/PremiumFeaturesList.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -970,15 +962,15 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text-soft);
-  margin: 0 0 0.5rem;
+  margin: 0 0 1rem;
 }
+
 .section-desc {
   font-size: 0.88rem;
   color: var(--color-text-soft);
   margin: 0 0 1rem;
 }
 
-/* ── Grille de thèmes ── */
 .theme-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
@@ -1002,15 +994,18 @@ onMounted(() => {
     transform 0.12s;
   position: relative;
 }
+
 .theme-card:hover {
   border-color: var(--color-primary-light);
   background: var(--color-primary-bg);
   transform: translateY(-2px);
 }
+
 .theme-card--active {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
 }
+
 .theme-card--seasonal {
   border-color: #f59e0b;
 }
@@ -1019,12 +1014,14 @@ onMounted(() => {
   font-size: 1.8rem;
   line-height: 1;
 }
+
 .theme-card-name {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text);
   text-align: center;
 }
+
 .theme-card-badge {
   font-size: 0.6rem;
   font-weight: 800;
@@ -1035,6 +1032,7 @@ onMounted(() => {
   border-radius: 999px;
   padding: 0.1rem 0.4rem;
 }
+
 .theme-card-check {
   position: absolute;
   top: 0.3rem;
