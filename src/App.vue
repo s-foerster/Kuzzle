@@ -30,9 +30,9 @@
 
         <!-- Actions droite -->
         <div class="header-actions">
-          <!-- Bouton thème (membres premium uniquement) -->
+          <!-- Bouton thème (tous les connectés, achat si non-premium) -->
           <div
-            v-if="authStore.isPremium"
+            v-if="authStore.isLoggedIn"
             class="theme-picker-wrapper"
             ref="themePickerRef"
           >
@@ -42,30 +42,55 @@
               :title="`Thème : ${themeComposable.activeTheme.value.name}`"
               aria-label="Changer de thème"
             >
-              {{ themeComposable.activeTheme.value.emoji }}
+              <component
+                :is="themeComposable.activeTheme.value.icon"
+                class="btn-theme-icon"
+              />
             </button>
             <Transition name="dropdown-fade">
               <div v-if="themePickerOpen" class="theme-dropdown">
                 <p class="theme-dropdown-title">Thème d'icône</p>
-                <button
-                  v-for="theme in themeComposable.allThemes"
-                  :key="theme.id"
-                  class="theme-option"
-                  :class="{
-                    'theme-option--active':
-                      themeComposable.activeTheme.value.id === theme.id,
-                  }"
-                  :disabled="theme.premium && !authStore.isPremium"
-                  @click="selectTheme(theme.id)"
-                >
-                  <span class="theme-option-emoji">{{ theme.emoji }}</span>
-                  <span class="theme-option-name">{{ theme.name }}</span>
-                  <span
-                    v-if="themeComposable.activeTheme.value.id === theme.id"
-                    class="theme-option-check"
-                    >✓</span
+                <div class="theme-dropdown-scroll">
+                  <button
+                    v-for="theme in themeComposable.allThemes"
+                    :key="theme.id"
+                    class="theme-option"
+                    :class="{
+                      'theme-option--active':
+                        themeComposable.activeTheme.value.id === theme.id,
+                      'theme-option--locked':
+                        theme.premium && !authStore.isPremium,
+                    }"
+                    @click="selectTheme(theme.id)"
                   >
-                </button>
+                    <span class="theme-option-icon">
+                      <component :is="theme.icon" />
+                    </span>
+                    <span class="theme-option-name">{{ theme.name }}</span>
+                    <span
+                      v-if="theme.premium && !authStore.isPremium"
+                      class="theme-option-lock"
+                      >🔒</span
+                    >
+                    <span
+                      v-else-if="
+                        themeComposable.activeTheme.value.id === theme.id
+                      "
+                      class="theme-option-check"
+                      >✓</span
+                    >
+                  </button>
+                </div>
+                <!-- Nudge premium -->
+                <Transition name="nudge-fade">
+                  <div v-if="premiumNudge" class="theme-premium-nudge">
+                    <span>⭐</span>
+                    <span>Fonctionnalité <strong>Premium</strong></span>
+                    <button class="theme-nudge-cta" @click="goToPremium">
+                      Débloquer
+                    </button>
+                  </div>
+                </Transition>
               </div>
             </Transition>
           </div>
@@ -152,6 +177,8 @@ const currentYear = new Date().getFullYear();
 const themePickerOpen = ref(false);
 const themePickerRef = ref(null);
 const seasonalBannerDismissed = ref(false);
+const premiumNudge = ref(false);
+let premiumNudgeTimer = null;
 
 /** Afficher le banner saisonnier si applicable et non encore vu cette session */
 const showSeasonalBanner = computed(
@@ -166,8 +193,23 @@ const showBackButton = computed(() =>
 );
 
 function selectTheme(id) {
+  const theme = themeComposable.allThemes.find((t) => t.id === id);
+  if (theme?.premium && !authStore.isPremium) {
+    premiumNudge.value = true;
+    clearTimeout(premiumNudgeTimer);
+    premiumNudgeTimer = setTimeout(() => {
+      premiumNudge.value = false;
+    }, 3500);
+    return;
+  }
   themeComposable.setTheme(id);
   themePickerOpen.value = false;
+}
+
+function goToPremium() {
+  themePickerOpen.value = false;
+  premiumNudge.value = false;
+  router.push("/profil");
 }
 
 function applySeasonalTheme() {
@@ -265,25 +307,31 @@ onMounted(async () => {
 }
 
 .btn-theme {
-  background: transparent;
+  background: var(--color-bg-card);
   border: 1.5px solid var(--color-border);
   border-radius: 50%;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.2rem;
+  height: 2.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
   cursor: pointer;
   transition:
     border-color 0.2s,
-    background 0.2s;
+    background 0.2s,
+    box-shadow 0.2s;
   padding: 0;
-  line-height: 1;
+  overflow: hidden;
 }
 .btn-theme:hover {
   border-color: var(--color-primary);
   background: var(--color-primary-bg);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+.btn-theme-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: block;
 }
 
 .theme-dropdown {
@@ -293,10 +341,12 @@ onMounted(async () => {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.13);
-  min-width: 180px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  min-width: 210px;
   z-index: 200;
-  padding: 0.5rem 0.4rem;
+  padding: 0.5rem 0.4rem 0.4rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .theme-dropdown-title {
@@ -307,20 +357,39 @@ onMounted(async () => {
   letter-spacing: 0.05em;
   padding: 0.2rem 0.5rem 0.4rem;
   margin: 0;
+  flex-shrink: 0;
+}
+
+.theme-dropdown-scroll {
+  overflow-y: auto;
+  max-height: 320px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  padding-right: 2px;
+}
+.theme-dropdown-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.theme-dropdown-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.theme-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
 }
 
 .theme-option {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.6rem;
   width: 100%;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 0.45rem 0.55rem;
+  padding: 0.4rem 0.55rem;
   cursor: pointer;
   font-family: var(--font-family);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--color-text);
   text-align: left;
   transition: background 0.15s;
@@ -337,9 +406,22 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-.theme-option-emoji {
-  font-size: 1.15rem;
+.theme-option-icon {
+  width: 1.6rem;
+  height: 1.6rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  padding: 2px;
+}
+.theme-option-icon > * {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .theme-option-name {
   flex: 1;
@@ -348,6 +430,56 @@ onMounted(async () => {
   color: var(--color-primary);
   font-weight: 800;
   font-size: 0.85rem;
+}
+.theme-option--locked {
+  opacity: 0.6;
+}
+.theme-option-lock {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* Nudge premium inline */
+.theme-premium-nudge {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.6rem;
+  margin: 0.3rem 0 0;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: #92400e;
+}
+.theme-nudge-cta {
+  margin-left: auto;
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.22rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-family);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.theme-nudge-cta:hover {
+  background: #d97706;
+}
+.nudge-fade-enter-active,
+.nudge-fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.nudge-fade-enter-from,
+.nudge-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* Dropdown animation */

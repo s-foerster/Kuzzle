@@ -109,35 +109,46 @@
           Choisissez l'icône affichée à la place des cœurs dans la grille.
         </p>
 
-        <PremiumGate label="les thèmes">
-          <div class="theme-grid">
-            <button
-              v-for="theme in themeComposable.allThemes"
-              :key="theme.id"
-              class="theme-card"
-              :class="{
-                'theme-card--active':
-                  themeComposable.activeTheme.value.id === theme.id,
-                'theme-card--seasonal':
-                  themeComposable.suggestedTheme.value?.id === theme.id,
-              }"
-              @click="themeComposable.setTheme(theme.id)"
+        <div class="theme-grid">
+          <button
+            v-for="theme in themeComposable.allThemes"
+            :key="theme.id"
+            class="theme-card"
+            :class="{
+              'theme-card--active':
+                themeComposable.activeTheme.value.id === theme.id,
+              'theme-card--seasonal':
+                themeComposable.suggestedTheme.value?.id === theme.id,
+              'theme-card--locked': theme.premium && !authStore.isPremium,
+            }"
+            @click="
+              theme.premium && !authStore.isPremium
+                ? handleCheckout()
+                : themeComposable.setTheme(theme.id)
+            "
+          >
+            <span class="theme-card-icon">
+              <component :is="theme.icon" />
+            </span>
+            <span class="theme-card-name">{{ theme.name }}</span>
+            <span
+              v-if="themeComposable.suggestedTheme.value?.id === theme.id"
+              class="theme-card-badge"
+              >Saisonnier</span
             >
-              <span class="theme-card-emoji">{{ theme.emoji }}</span>
-              <span class="theme-card-name">{{ theme.name }}</span>
-              <span
-                v-if="themeComposable.suggestedTheme.value?.id === theme.id"
-                class="theme-card-badge"
-                >Saisonnier</span
-              >
-              <span
-                v-if="themeComposable.activeTheme.value.id === theme.id"
-                class="theme-card-check"
-                >✓</span
-              >
-            </button>
-          </div>
-        </PremiumGate>
+            <span
+              v-if="theme.premium && !authStore.isPremium"
+              class="theme-card-lock"
+              title="Pass Premium requis"
+              >🔒</span
+            >
+            <span
+              v-else-if="themeComposable.activeTheme.value.id === theme.id"
+              class="theme-card-check"
+              >✓</span
+            >
+          </button>
+        </div>
       </div>
 
       <!-- ── Nom d'utilisateur ──────────────────────────────────────────── -->
@@ -1010,9 +1021,18 @@ onMounted(() => {
   border-color: #f59e0b;
 }
 
-.theme-card-emoji {
-  font-size: 1.8rem;
-  line-height: 1;
+.theme-card-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.theme-card-icon > * {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .theme-card-name {
@@ -1033,6 +1053,15 @@ onMounted(() => {
   padding: 0.1rem 0.4rem;
 }
 
+.theme-card--locked {
+  opacity: 0.72;
+  cursor: pointer;
+}
+.theme-card--locked:hover {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  transform: translateY(-2px);
+}
 .theme-card-check {
   position: absolute;
   top: 0.3rem;
@@ -1040,6 +1069,13 @@ onMounted(() => {
   font-size: 0.75rem;
   font-weight: 900;
   color: var(--color-primary);
+}
+.theme-card-lock {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 /* ── Header profil ── */
