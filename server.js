@@ -293,78 +293,23 @@ app.get('/api/daily-puzzle', async (req, res) => {
     });
   }
 
-  // Générer un nouveau puzzle avec validation d'unicité
-  console.log(`⚙️ Génération puzzle unique pour ${todayKey}...`);
-  const startTime = Date.now();
-
-  try {
-    // Générer avec la date spécifique comme seed
-    const seedFromDate = todayKey.replace(/-/g, '');
-    const config = pickConfigForDate(todayKey);
-    console.log(`   └─ Config choisie: gridSize=${config.gridSize}, minSmallZones=${config.minSmallZones}, smallZoneSize=${config.smallZoneSize}`);
-    const puzzle = generatePuzzleHeartsFirst(seedFromDate, {
-      ...config,
-      checkUniqueness: true,
-      maxTotalAttempts: 1000000
-    });
-    const generationTime = Date.now() - startTime;
-
-    if (!puzzle) {
-      console.error(`❌ Échec génération pour ${todayKey}`);
-      return res.status(500).json({
-        success: false,
-        error: 'Échec génération puzzle unique'
-      });
-    }
-
-    // Vérifier que le puzzle est bien unique
-    if (!puzzle.metadata?.isUnique) {
-      console.warn(`⚠️ Puzzle généré n'est pas unique pour ${todayKey}`);
-      return res.status(500).json({
-        success: false,
-        error: 'Puzzle généré n\'est pas unique'
-      });
-    }
-
-    // Sauvegarder en cache
-    puzzleCache[todayKey] = {
-      puzzle: {
-        zones: puzzle.zones,
-        solution: puzzle.solution
-      },
-      generatedAt: new Date().toISOString(),
-      metadata: puzzle.metadata
-    };
-
-    saveCache();
-
-    console.log(`✅ Puzzle unique généré pour ${todayKey}`);
-    console.log(`   ├─ Temps: ${generationTime}ms`);
-    console.log(`   ├─ Tentatives: ${puzzle.metadata.totalAttempts}`);
-    console.log(`   ├─ Rejetés: ${puzzle.metadata.rejectedNonUnique}`);
-    console.log(`   └─ Validation: ${puzzle.metadata.validationTime}ms`);
-
-    return res.json({
-      success: true,
-      date: todayKey,
-      puzzle: puzzleCache[todayKey].puzzle,
-      cached: false,
-      generatedAt: puzzleCache[todayKey].generatedAt,
-      generationTime,
-      metadata: puzzle.metadata
-    });
-
-  } catch (err) {
-    console.error(`❌ Erreur génération puzzle:`, err);
-    return res.status(500).json({
-      success: false,
-      error: safeError(err)
-    });
-  }
+  // Puzzle absent du cache : pas de génération à la demande
+  console.warn(`⚠️ Puzzle non trouvé en cache pour ${todayKey}`);
+  return res.status(404).json({
+    success: false,
+    error: 'Puzzle non disponible pour cette date'
+  });
 });
+
+// Lumizle désactivé jusqu'à sa sortie officielle
+const LUMIZLE_ENABLED = process.env.LUMIZLE_ENABLED === 'true';
 
 // API : Puzzle Lumizle quotidien
 app.get('/api/lumizle-daily', async (req, res) => {
+  if (!LUMIZLE_ENABLED) {
+    return res.status(503).json({ success: false, error: 'Lumizle non disponible' });
+  }
+
   const requestedDate = req.query.date; // YYYY-MM-DD optionnel
 
   // Validation du paramètre date
