@@ -45,12 +45,12 @@ for (const dateKey of missing) {
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
   if (!puzzle) {
-    console.error(`  ❌ ÉCHEC (${elapsed}s) — puzzle non généré`);
+    console.error(`  ❌ ÉCHEC (${elapsed}s) - puzzle non généré`);
     failed++;
     continue;
   }
 
-  console.log(`  ✅ OK — ${elapsed}s`);
+  console.log(`  ✅ OK - ${elapsed}s`);
 
   cache[dateKey] = {
     puzzle: {

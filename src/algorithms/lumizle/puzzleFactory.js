@@ -56,7 +56,7 @@ export const LUMIZLE_DIFFICULTY_CONFIGS = {
   },
 };
 
-// Configs quotidiennes — progression de difficulté variée
+// Configs quotidiennes - progression de difficulté variée
 const DAILY_CONFIGS = [
   // ── Easy ──────────────────────────────────────────────────────────────────
   {

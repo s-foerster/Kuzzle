@@ -49,7 +49,7 @@ export function useGame() {
   const isTimerStarted = ref(false);
   let timerInterval = null;
 
-  // Pause silencieuse externe (ex: modale auth ouverte) — ne déclenche pas l'UI de pause.
+  // Pause silencieuse externe (ex: modale auth ouverte) - ne déclenche pas l'UI de pause.
   const _timerFrozen = ref(false);
   function freezeTimer(frozen) { _timerFrozen.value = frozen; }
 

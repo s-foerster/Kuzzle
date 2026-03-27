@@ -41,7 +41,7 @@ for (const cfg of configs) {
     process.exit(1);
   }
 
-  console.log(`  ✅ OK — ${puzzle.metadata.totalAttempts} attempts, ${puzzle.metadata.generationTime}ms`);
+  console.log(`  ✅ OK - ${puzzle.metadata.totalAttempts} attempts, ${puzzle.metadata.generationTime}ms`);
 
   results.push({
     id: cfg.id,

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 /**
- * Store de navigation — permet de passer des données entre vues
+ * Store de navigation - permet de passer des données entre vues
  * sans les sérialiser dans l'URL (ex: niveau practice, date d'archive).
  */
 export const useNavigationStore = defineStore('navigation', () => {

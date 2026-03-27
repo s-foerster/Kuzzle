@@ -1,5 +1,5 @@
 /**
- * useLumizle — Composable de gestion d'état pour le puzzle Lumizle.
+ * useLumizle - Composable de gestion d'état pour le puzzle Lumizle.
  *
  * Cellule player :
  *   0 = CELL_UNKNOWN  (non décidée, gris)

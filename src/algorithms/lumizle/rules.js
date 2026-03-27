@@ -69,7 +69,7 @@ function getComponents(grid, size, cellValues) {
 }
 
 // ---------------------------------------------------------------------------
-// Règle : CONNECT_LIGHT — toutes les cellules claires forment un seul groupe
+// Règle : CONNECT_LIGHT - toutes les cellules claires forment un seul groupe
 // ---------------------------------------------------------------------------
 const CONNECT_LIGHT = {
   id: 'CONNECT_LIGHT',
@@ -159,7 +159,7 @@ const CONNECT_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : CONNECT_DARK — toutes les cellules sombres forment un seul groupe
+// Règle : CONNECT_DARK - toutes les cellules sombres forment un seul groupe
 // ---------------------------------------------------------------------------
 const CONNECT_DARK = {
   id: 'CONNECT_DARK',
@@ -236,7 +236,7 @@ const CONNECT_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : DARK_REGION_SIZE — chaque groupe sombre a exactement N cellules
+// Règle : DARK_REGION_SIZE - chaque groupe sombre a exactement N cellules
 // ---------------------------------------------------------------------------
 const DARK_REGION_SIZE = {
   id: 'DARK_REGION_SIZE',
@@ -291,7 +291,7 @@ const DARK_REGION_SIZE = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_2X2_DARK — pas de carré 2×2 sombre
+// Règle : NO_2X2_DARK - pas de carré 2×2 sombre
 // ---------------------------------------------------------------------------
 const NO_2X2_DARK = {
   id: 'NO_2X2_DARK',
@@ -346,7 +346,7 @@ const NO_2X2_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_2X2_LIGHT — pas de carré 2×2 clair
+// Règle : NO_2X2_LIGHT - pas de carré 2×2 clair
 // ---------------------------------------------------------------------------
 const NO_2X2_LIGHT = {
   id: 'NO_2X2_LIGHT',
@@ -401,7 +401,7 @@ const NO_2X2_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_3_IN_A_ROW_DARK — pas de ligne de 3 cellules sombres
+// Règle : NO_3_IN_A_ROW_DARK - pas de ligne de 3 cellules sombres
 // ---------------------------------------------------------------------------
 const NO_3_IN_A_ROW_DARK = {
   id: 'NO_3_IN_A_ROW_DARK',
@@ -445,7 +445,7 @@ const NO_3_IN_A_ROW_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_3_IN_A_ROW_LIGHT — pas de ligne de 3 cellules claires
+// Règle : NO_3_IN_A_ROW_LIGHT - pas de ligne de 3 cellules claires
 // ---------------------------------------------------------------------------
 const NO_3_IN_A_ROW_LIGHT = {
   id: 'NO_3_IN_A_ROW_LIGHT',
@@ -489,7 +489,7 @@ const NO_3_IN_A_ROW_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
-// Helpers — rotations de patterns pour NO_PATTERN_*
+// Helpers - rotations de patterns pour NO_PATTERN_*
 // ---------------------------------------------------------------------------
 
 function rotate90(pattern) {
@@ -549,7 +549,7 @@ function getPatternViolations(grid, size, cellVal, patternVariants) {
 }
 
 // ---------------------------------------------------------------------------
-// Règle : LIGHT_REGION_SIZE — chaque région claire a exactement n cellules
+// Règle : LIGHT_REGION_SIZE - chaque région claire a exactement n cellules
 // ---------------------------------------------------------------------------
 const LIGHT_REGION_SIZE = {
   id: 'LIGHT_REGION_SIZE',
@@ -574,7 +574,7 @@ const LIGHT_REGION_SIZE = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : DARK_AREA_EXACT — total de cellules sombres = exactement n
+// Règle : DARK_AREA_EXACT - total de cellules sombres = exactement n
 // ---------------------------------------------------------------------------
 const DARK_AREA_EXACT = {
   id: 'DARK_AREA_EXACT',
@@ -604,7 +604,7 @@ const DARK_AREA_EXACT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : LIGHT_AREA_EXACT — total de cellules claires = exactement n
+// Règle : LIGHT_AREA_EXACT - total de cellules claires = exactement n
 // ---------------------------------------------------------------------------
 const LIGHT_AREA_EXACT = {
   id: 'LIGHT_AREA_EXACT',
@@ -634,7 +634,7 @@ const LIGHT_AREA_EXACT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : ROW_EXACT_DARK — exactement n cellules sombres par ligne
+// Règle : ROW_EXACT_DARK - exactement n cellules sombres par ligne
 // ---------------------------------------------------------------------------
 const ROW_EXACT_DARK = {
   id: 'ROW_EXACT_DARK',
@@ -668,7 +668,7 @@ const ROW_EXACT_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : ROW_EXACT_LIGHT — exactement n cellules claires par ligne
+// Règle : ROW_EXACT_LIGHT - exactement n cellules claires par ligne
 // ---------------------------------------------------------------------------
 const ROW_EXACT_LIGHT = {
   id: 'ROW_EXACT_LIGHT',
@@ -702,7 +702,7 @@ const ROW_EXACT_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : COL_EXACT_DARK — exactement n cellules sombres par colonne
+// Règle : COL_EXACT_DARK - exactement n cellules sombres par colonne
 // ---------------------------------------------------------------------------
 const COL_EXACT_DARK = {
   id: 'COL_EXACT_DARK',
@@ -740,7 +740,7 @@ const COL_EXACT_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : COL_EXACT_LIGHT — exactement n cellules claires par colonne
+// Règle : COL_EXACT_LIGHT - exactement n cellules claires par colonne
 // ---------------------------------------------------------------------------
 const COL_EXACT_LIGHT = {
   id: 'COL_EXACT_LIGHT',
@@ -778,7 +778,7 @@ const COL_EXACT_LIGHT = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : SYMMETRY_180 — symétrie rotationnelle 180°
+// Règle : SYMMETRY_180 - symétrie rotationnelle 180°
 // ---------------------------------------------------------------------------
 const SYMMETRY_180 = {
   id: 'SYMMETRY_180',
@@ -817,7 +817,7 @@ const SYMMETRY_180 = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NURIBOU_STRIPES — les îles sombres sont des bandes rectilignes
+// Règle : NURIBOU_STRIPES - les îles sombres sont des bandes rectilignes
 // ---------------------------------------------------------------------------
 const NURIBOU_STRIPES = {
   id: 'NURIBOU_STRIPES',
@@ -847,7 +847,7 @@ const NURIBOU_STRIPES = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_PATTERN_DARK — pattern sombre interdit (L, T, S, PLUS)
+// Règle : NO_PATTERN_DARK - pattern sombre interdit (L, T, S, PLUS)
 // ---------------------------------------------------------------------------
 const NO_PATTERN_DARK = {
   id: 'NO_PATTERN_DARK',
@@ -871,7 +871,7 @@ const NO_PATTERN_DARK = {
 };
 
 // ---------------------------------------------------------------------------
-// Règle : NO_PATTERN_LIGHT — pattern clair interdit (L, T, S, PLUS)
+// Règle : NO_PATTERN_LIGHT - pattern clair interdit (L, T, S, PLUS)
 // ---------------------------------------------------------------------------
 const NO_PATTERN_LIGHT = {
   id: 'NO_PATTERN_LIGHT',
@@ -930,7 +930,7 @@ export function checkAllRules(grid, size, rules) {
   });
 }
 
-/** Vérification partielle pour pruning — retourne false si violation définitive. */
+/** Vérification partielle pour pruning - retourne false si violation définitive. */
 export function checkAllPartialRules(grid, size, rules) {
   return rules.every(({ id, params }) => {
     const rule = getRuleById(id);

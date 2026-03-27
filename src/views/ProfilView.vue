@@ -75,7 +75,7 @@
             {{
               subscriptionLoading
                 ? "Chargement…"
-                : "Commencer mon essai gratuit — 7 jours"
+                : "Commencer mon essai gratuit - 7 jours"
             }}
           </button>
         </template>
@@ -283,7 +283,7 @@
                   <div class="stat-label">Parties jouées</div>
                 </div>
                 <div class="stat-card stat-card--highlight">
-                  <div class="stat-value">{{ stats.bestHearts || "—" }}</div>
+                  <div class="stat-value">{{ stats.bestHearts || "-" }}</div>
                   <div class="stat-label">Meilleur temps</div>
                 </div>
                 <div
@@ -319,7 +319,7 @@
                   <div class="stat-label">Parties jouées</div>
                 </div>
                 <div class="stat-card stat-card--highlight">
-                  <div class="stat-value">{{ stats.bestLumizle || "—" }}</div>
+                  <div class="stat-value">{{ stats.bestLumizle || "-" }}</div>
                   <div class="stat-label">Meilleur temps</div>
                 </div>
                 <div
@@ -742,7 +742,7 @@ function calcStreak(gameType) {
     }
   }
 
-  // Streak actuel (depuis aujourd'hui ou hier — le joueur n'a peut-être pas encore joué aujourd'hui)
+  // Streak actuel (depuis aujourd'hui ou hier - le joueur n'a peut-être pas encore joué aujourd'hui)
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
   const toStr = (d) =>
@@ -839,14 +839,14 @@ async function loadStats() {
 
 // ── Formatters ────────────────────────────────────────────────────────────
 function formatSeconds(s) {
-  if (s == null || s === "") return "—";
+  if (s == null || s === "") return "-";
   const m = Math.floor(s / 60),
     sec = s % 60;
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   try {
     const [y, m, d] = dateStr.split("-").map(Number);
     return new Date(y, m - 1, d).toLocaleDateString("fr-FR", {

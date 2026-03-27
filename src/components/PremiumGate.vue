@@ -8,7 +8,7 @@
       <slot name="locked">
         <button class="premium-gate-default" @click="handleCta">
           <span class="premium-gate-icon">⭐</span>
-          <span>Essai gratuit 7 jours — débloquer {{ label }}</span>
+          <span>Essai gratuit 7 jours - débloquer {{ label }}</span>
         </button>
       </slot>
     </template>
@@ -26,7 +26,7 @@
       <div class="premium-blur-overlay">
         <button class="premium-blur-hint" @click="handleCta">
           <span class="premium-blur-icon">⭐</span>
-          <span>Essai gratuit 7 jours — débloquer {{ label }}</span>
+          <span>Essai gratuit 7 jours - débloquer {{ label }}</span>
         </button>
       </div>
     </div>

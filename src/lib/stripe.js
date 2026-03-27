@@ -1,5 +1,5 @@
 /**
- * stripe.js — Chargement lazy de Stripe.js
+ * stripe.js - Chargement lazy de Stripe.js
  *
  * On charge Stripe.js uniquement quand c'est nécessaire (pas au démarrage de l'app),
  * et on conserve la promesse pour éviter de charger le script plusieurs fois.
@@ -15,7 +15,7 @@ export function getStripe() {
     const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
     if (!publishableKey) {
-        console.warn('[stripe.js] VITE_STRIPE_PUBLISHABLE_KEY non définie — paiements désactivés');
+        console.warn('[stripe.js] VITE_STRIPE_PUBLISHABLE_KEY non définie - paiements désactivés');
         return Promise.resolve(null);
     }
 

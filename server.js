@@ -236,7 +236,7 @@ const pregenerateLimiter = rateLimit({
   message: { success: false, error: 'Limite de pré-génération atteinte.' },
 });
 
-// Rate limit global sur /api/* — le webhook Stripe n'y est pas soumis car il est
+// Rate limit global sur /api/* - le webhook Stripe n'y est pas soumis car il est
 // déclaré AVANT ce middleware dans l'ordre Express. La signature HMAC du webhook
 // constitue sa propre protection contre les abus.
 app.use('/api/', apiLimiter);
@@ -522,7 +522,7 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-12-18.acacia' });
 }
 
-// Accesseurs Supabase — retournent les singletons initialisés au démarrage
+// Accesseurs Supabase - retournent les singletons initialisés au démarrage
 function getSupabaseAdminClient() { return _supabaseAdmin; }
 function getSupabaseAnonClient() { return _supabaseAnon; }
 
@@ -653,7 +653,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
     // req.body est un Buffer grâce au middleware express.raw()
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.warn(`⚠️ Webhook Stripe : signature invalide — ${err.message}`);
+    console.warn(`⚠️ Webhook Stripe : signature invalide - ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 

@@ -20,7 +20,7 @@ import {
 } from './rules.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Contraintes locales O(1) — identiques à celles du générateur
+// Contraintes locales O(1) - identiques à celles du générateur
 // ─────────────────────────────────────────────────────────────────────────────
 
 function creates2x2(grid, size, r, c, val, ruleIds) {

@@ -136,7 +136,7 @@ watch(
 async function handleGoogle() {
   googleLoading.value = true;
   await authStore.loginWithGoogle();
-  // After OAuth redirect, page navigates away — no need to reset loading
+  // After OAuth redirect, page navigates away - no need to reset loading
 }
 </script>
 

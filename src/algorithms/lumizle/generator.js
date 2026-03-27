@@ -1,5 +1,5 @@
 /**
- * Lumizle - Générateur de puzzles (v3 — RSG Bicolore)
+ * Lumizle - Générateur de puzzles (v3 - RSG Bicolore)
  *
  * Phase 1 : Génère une solution complète valide par Randomized Spanning Growth.
  *   - Deux germes (un sombre, un clair) sont plantés aléatoirement.
@@ -272,7 +272,7 @@ function generateSolutionRSG(
       } else if (darkFrontier.size > 0) {
         frontier = darkFrontier; val = CELL_DARK;
       } else {
-        // Plus aucune frontière — des cellules sont orphelines.
+        // Plus aucune frontière - des cellules sont orphelines.
         // C'est une impasse : on restarte cette tentative.
         ok = false; break;
       }

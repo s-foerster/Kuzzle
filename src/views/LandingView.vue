@@ -110,7 +110,7 @@
     </section>
 
     <footer class="app-footer">
-      <p>Un nouveau puzzle chaque jour — revenez demain !</p>
+      <p>Un nouveau puzzle chaque jour - revenez demain !</p>
     </footer>
   </main>
 </template>

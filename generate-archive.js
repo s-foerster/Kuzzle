@@ -34,7 +34,7 @@ for (const dateKey of missing) {
     process.exit(1);
   }
 
-  console.log(`  ✅ OK — ${puzzle.metadata.totalAttempts} tentatives, ${puzzle.metadata.generationTime}ms`);
+  console.log(`  ✅ OK - ${puzzle.metadata.totalAttempts} tentatives, ${puzzle.metadata.generationTime}ms`);
 
   cache[dateKey] = {
     puzzle: { zones: puzzle.zones, solution: puzzle.solution },

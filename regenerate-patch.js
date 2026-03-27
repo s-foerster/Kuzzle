@@ -34,7 +34,7 @@ for (const cfg of toRegenerate) {
     process.exit(1);
   }
 
-  console.log(`  ✅ OK — ${puzzle.metadata.totalAttempts} attempts, ${puzzle.metadata.generationTime}ms`);
+  console.log(`  ✅ OK - ${puzzle.metadata.totalAttempts} attempts, ${puzzle.metadata.generationTime}ms`);
 
   const idx = existing.findIndex(p => p.id === cfg.id);
   existing[idx] = {

@@ -46,7 +46,7 @@
           Les prix sont affichés en euros TTC sur les pages de vente du site.
         </p>
         <p class="notice">
-          TVA non applicable — art. 293B du CGI (franchise en base de TVA)
+          TVA non applicable - art. 293B du CGI (franchise en base de TVA)
         </p>
         <p>
           L'éditeur se réserve le droit de modifier ses tarifs à tout moment.

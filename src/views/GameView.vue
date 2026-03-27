@@ -269,7 +269,7 @@
                 {{
                   paywallLoading
                     ? "Chargement…"
-                    : "Essayer gratuitement — 7 jours"
+                    : "Essayer gratuitement - 7 jours"
                 }}
               </button>
               <p class="paywall-hint">
@@ -1547,7 +1547,7 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  /* Fond opaque simple : même raison que AuthModal — backdrop-filter: blur()
+  /* Fond opaque simple : même raison que AuthModal - backdrop-filter: blur()
      re-floute le viewport entier à chaque repaint (tick timer, etc.). */
   background: rgba(10, 8, 20, 0.72);
   display: flex;

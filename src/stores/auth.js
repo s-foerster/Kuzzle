@@ -102,7 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Sync inter-onglets : détecter connexion/déconnexion dans un autre onglet
     // via l'événement 'storage' (déclenché uniquement pour les autres onglets,
-    // pas pour l'onglet qui écrit — donc pas de boucle infinie).
+    // pas pour l'onglet qui écrit - donc pas de boucle infinie).
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (event) => {
         // Supabase stocke le token sous 'sb-<ref>-auth-token'

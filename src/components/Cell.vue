@@ -244,7 +244,7 @@ const ariaLabel = computed(() => {
   }
 }
 
-/* Couleurs des zones — utilisent des variables CSS injectées par useTheme via GameGrid */
+/* Couleurs des zones - utilisent des variables CSS injectées par useTheme via GameGrid */
 .zone-0 {
   --cell-bg: var(--zone-color-0, #fff0f2);
 }

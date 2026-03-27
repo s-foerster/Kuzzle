@@ -208,7 +208,7 @@
         <h2>7. Vos droits (RGPD)</h2>
         <p>
           Conformément au Règlement Général sur la Protection des Données (RGPD
-          — Règlement UE 2016/679), vous disposez des droits suivants :
+          - Règlement UE 2016/679), vous disposez des droits suivants :
         </p>
         <ul>
           <li>
@@ -248,7 +248,7 @@
           <a href="https://www.cnil.fr" target="_blank" rel="noopener"
             >cnil.fr</a
           >
-          — 3 Place de Fontenoy, 75007 Paris.
+          - 3 Place de Fontenoy, 75007 Paris.
         </p>
       </section>
 

@@ -1,5 +1,5 @@
 /**
- * useSubscription.js — Composable Vue pour le paiement Stripe
+ * useSubscription.js - Composable Vue pour le paiement Stripe
  *
  * Expose :
  *   startCheckout()  → redirige vers Stripe Checkout

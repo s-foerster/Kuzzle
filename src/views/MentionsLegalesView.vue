@@ -24,7 +24,7 @@
           </li>
         </ul>
         <p class="notice">
-          TVA non applicable — art. 293B du CGI (franchise en base de TVA)
+          TVA non applicable - art. 293B du CGI (franchise en base de TVA)
         </p>
       </section>
 

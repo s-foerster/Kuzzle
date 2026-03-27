@@ -72,12 +72,12 @@ for (const dateKey of missing) {
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
 
   if (!puzzle || !puzzle.metadata?.isUnique) {
-    console.error(`  ❌ ÉCHEC (${elapsed}s) — puzzle non généré ou non unique`);
+    console.error(`  ❌ ÉCHEC (${elapsed}s) - puzzle non généré ou non unique`);
     failed++;
     continue;
   }
 
-  console.log(`  ✅ OK — ${puzzle.metadata.totalAttempts} tentatives, ${elapsed}s`);
+  console.log(`  ✅ OK - ${puzzle.metadata.totalAttempts} tentatives, ${elapsed}s`);
 
   cache[dateKey] = {
     puzzle: { zones: puzzle.zones, solution: puzzle.solution },
