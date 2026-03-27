@@ -99,6 +99,32 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     })
+
+    // Sync inter-onglets : détecter connexion/déconnexion dans un autre onglet
+    // via l'événement 'storage' (déclenché uniquement pour les autres onglets,
+    // pas pour l'onglet qui écrit — donc pas de boucle infinie).
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (event) => {
+        // Supabase stocke le token sous 'sb-<ref>-auth-token'
+        if (!event.key?.startsWith('sb-') || !event.key?.endsWith('-auth-token')) return
+
+        if (!event.newValue) {
+          // Token supprimé dans un autre onglet → déconnexion locale immédiate
+          user.value    = null
+          profile.value = null
+        } else if (event.newValue !== event.oldValue) {
+          // Token mis à jour (connexion ou refresh dans un autre onglet) → re-sync session
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              user.value = session.user
+              if (!profile.value || profile.value.id !== session.user.id) {
+                fetchProfile(session.user.id).catch(console.error)
+              }
+            }
+          }).catch(console.error)
+        }
+      })
+    }
   }
 
   // ── Initialisation ───────────────────────────────────────────────────────
@@ -112,19 +138,29 @@ export const useAuthStore = defineStore('auth', () => {
     // Garde d'idempotence : onAuthStateChange a peut-être déjà tout hydraté.
     if (initialized.value) return
 
-    const { data: { session } } = await supabase.auth.getSession()
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
 
-    if (session?.user) {
-      user.value = session.user
-      if (!profile.value || profile.value.id !== session.user.id) {
-        await fetchProfile(session.user.id)
+      if (session?.user) {
+        user.value = session.user
+        if (!profile.value || profile.value.id !== session.user.id) {
+          await fetchProfile(session.user.id)
+        }
+      } else {
+        user.value    = null
+        profile.value = null
       }
-    } else {
-      user.value    = null
-      profile.value = null
+    } catch (err) {
+      // getSession() peut lever une DOMException 'TimeoutError' si le verrou
+      // Web Locks expire (réseau très lent ou onglet freezé).
+      // On loggue l'erreur mais on ne bloque pas l'app : l'utilisateur sera
+      // considéré comme non connecté et pourra réessayer.
+      console.warn('[auth] init error (lock timeout ou réseau) :', err)
+    } finally {
+      // Toujours positionner initialized, même en cas d'exception,
+      // pour éviter que l'app reste bloquée en état "auth non initialisée".
+      initialized.value = true
     }
-
-    initialized.value = true
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────

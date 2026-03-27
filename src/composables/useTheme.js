@@ -6,6 +6,9 @@ const STORAGE_KEY = 'hearts-preferred-theme'
 
 // Singleton partagé entre tous les composants
 const _themeId = ref(localStorage.getItem(STORAGE_KEY) ?? 'default')
+// Flag : l'utilisateur a explicitement changé le thème dans cette session.
+// Empêche un rechargement de profil Supabase (potentiellement périmé) d'écraser le choix.
+let _userSetTheme = false
 
 export function useTheme() {
   const authStore = useAuthStore()
@@ -58,6 +61,7 @@ export function useTheme() {
     // Non-premium : impossible de choisir un thème premium
     if (theme.premium && !authStore.isPremium) return
 
+    _userSetTheme = true
     _themeId.value = id
     localStorage.setItem(STORAGE_KEY, id)
 
@@ -73,6 +77,8 @@ export function useTheme() {
    * @param {string|null} serverThemeId
    */
   function syncFromServer(serverThemeId) {
+    // Ne pas écraser si l'utilisateur a explicitement changé le thème cette session
+    if (_userSetTheme) return
     if (serverThemeId && serverThemeId !== _themeId.value) {
       _themeId.value = serverThemeId
       localStorage.setItem(STORAGE_KEY, serverThemeId)

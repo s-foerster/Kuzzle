@@ -11,11 +11,15 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // Le SDK utilise ce verrou pour sérialiser les refreshs de token entre onglets.
 // Par défaut le timeout est 10 s → isAcquireTimeout sur TOUTES les requêtes DB
 // quand un autre onglet détient le verrou (ex: rafraîchissement de token).
-// Sans timeout : on attend que le verrou soit libéré. C'est sûr car l'API
-// Web Locks libère automatiquement le verrou si l'onglet se ferme ou crashe.
-function noTimeoutLock(name, _acquireTimeout, fn) {
+// On utilise un timeout de 60 s : assez long pour ne jamais gêner un refresh
+// normal (1-5 s), mais évite le deadlock permanent si un onglet freeze ou
+// si le réseau est très lent. AbortSignal.timeout() libère proprement le
+// verrou et rejette la promesse en attente avec une DOMException 'TimeoutError'.
+function customLock(name, _acquireTimeout, fn) {
   if (typeof navigator !== 'undefined' && navigator.locks) {
-    return navigator.locks.request(name, fn)
+    // AbortSignal.timeout disponible Chrome 103+, Firefox 100+, Safari 16+ (2022)
+    const signal = AbortSignal.timeout(60_000)
+    return navigator.locks.request(name, { signal }, fn)
   }
   // Fallback : Firefox en navigation privée et vieux navigateurs sans Web Locks
   return fn()
@@ -33,9 +37,9 @@ export const supabase = supabaseUrl && supabaseAnonKey
         // la seconde trouvant le verifier PKCE déjà consommé → erreur 401.
         detectSessionInUrl: false,
         flowType: 'pkce',
-        // Verrou sans timeout : élimine les isAcquireTimeout sur toutes les
-        // requêtes DB et appels auth quand plusieurs onglets sont ouverts.
-        lock: noTimeoutLock,
+        // Verrou 60 s : élimine les isAcquireTimeout sur les requêtes normales
+        // tout en évitant les deadlocks permanents sur réseau très lent / onglet freezé.
+        lock: customLock,
       },
     })
   : null

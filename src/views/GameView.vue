@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="app-main">
     <!-- Loading -->
     <div v-if="isLoading" class="loading">
@@ -255,9 +255,8 @@
               <p class="paywall-desc">
                 L’archive complète est réservée aux membres <strong
                   >Pass Premium</strong
-                >. Les non-membres ont accès aux <strong
-                  >3 derniers jours</strong
-                >
+                >. Commencez par <strong>7 jours d'essai gratuit</strong> — les
+                non-membres ont accès aux <strong>3 derniers jours</strong>
                 (aujourd’hui + 2 jours).
               </p>
               <PremiumFeaturesList list-class="paywall-perks" />
@@ -272,11 +271,12 @@
                 {{
                   paywallLoading
                     ? "Chargement…"
-                    : "Obtenir le Pass Premium — 5 €/mois"
+                    : "Essayer gratuitement — 7 jours"
                 }}
               </button>
               <p class="paywall-hint">
-                Annulation à tout moment depuis le portail.
+                7 jours gratuits, puis 5 €/mois. Aucun débit avant la fin de
+                l'essai. Annulation à tout moment.
               </p>
             </div>
           </div>

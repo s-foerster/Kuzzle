@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="app-main">
     <!-- Chargement initial -->
     <div v-if="!authStore.initialized" class="page-loading">
@@ -37,10 +37,11 @@
             <span class="success-icon">🎉</span>
             <div>
               <p class="success-title">
-                Paiement confirmé ! Bienvenue dans le Pass Premium.
+                Essai gratuit activé ! Bienvenue dans le Pass Premium.
               </p>
               <p class="success-sub">
-                Toutes vos nouvelles fonctionnalités sont désormais actives.
+                Profitez de 7 jours sans restrictions. Votre carte ne sera
+                débitée qu'à la fin de la période d'essai.
               </p>
             </div>
           </div>
@@ -58,7 +59,7 @@
             <div>
               <h2 class="premium-sell-title">Pass Premium</h2>
               <p class="premium-sell-sub">
-                Débloquez toutes les fonctionnalités — une seule fois.
+                7 jours gratuits, puis 5 €/mois. Annulation à tout moment.
               </p>
             </div>
           </div>
@@ -72,7 +73,9 @@
             @click="handleCheckout"
           >
             {{
-              subscriptionLoading ? "Chargement…" : "Obtenir le Pass Premium"
+              subscriptionLoading
+                ? "Chargement…"
+                : "Commencer mon essai gratuit — 7 jours"
             }}
           </button>
         </template>
@@ -152,15 +155,32 @@
 
         <!-- Popup premium thèmes -->
         <Transition name="modal-pop">
-          <div v-if="themePremiumNudge" class="theme-nudge-overlay" @click.self="themePremiumNudge = false">
+          <div
+            v-if="themePremiumNudge"
+            class="theme-nudge-overlay"
+            @click.self="themePremiumNudge = false"
+          >
             <div class="theme-nudge-modal">
               <div class="theme-nudge-modal-icon">⭐</div>
               <h3 class="theme-nudge-modal-title">Fonctionnalité Premium</h3>
-              <p class="theme-nudge-modal-desc">Les thèmes sont réservés aux membres <strong>Pass Premium</strong>. Débloquez tous les thèmes et bien plus encore !</p>
-              <button class="btn btn-premium" @click="handleCheckout" :disabled="subscriptionLoading">
-                {{ subscriptionLoading ? '…' : 'Obtenir le Pass Premium' }}
+              <p class="theme-nudge-modal-desc">
+                Les thèmes sont réservés aux membres
+                <strong>Pass Premium</strong>. Débloquez tous les thèmes et bien
+                plus encore !
+              </p>
+              <button
+                class="btn btn-premium"
+                @click="handleCheckout"
+                :disabled="subscriptionLoading"
+              >
+                {{ subscriptionLoading ? "…" : "Obtenir le Pass Premium" }}
               </button>
-              <button class="theme-nudge-modal-close" @click="themePremiumNudge = false">Non merci</button>
+              <button
+                class="theme-nudge-modal-close"
+                @click="themePremiumNudge = false"
+              >
+                Non merci
+              </button>
             </div>
           </div>
         </Transition>
@@ -1167,7 +1187,9 @@ onMounted(() => {
 }
 .modal-pop-enter-active .theme-nudge-modal,
 .modal-pop-leave-active .theme-nudge-modal {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 .modal-pop-enter-from,
 .modal-pop-leave-to {
