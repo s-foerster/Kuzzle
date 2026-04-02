@@ -8,18 +8,20 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // ce qui permet à l'app de fonctionner sans configuration (mode anonyme uniquement).
 
 // Implémentation personnalisée du verrou Web Locks.
-// Le SDK utilise ce verrou pour sérialiser les refreshs de token entre onglets.
-// Par défaut le timeout est 10 s → isAcquireTimeout sur TOUTES les requêtes DB
-// quand un autre onglet détient le verrou (ex: rafraîchissement de token).
-// On utilise un timeout de 60 s : assez long pour ne jamais gêner un refresh
-// normal (1-5 s), mais évite le deadlock permanent si un onglet freeze ou
-// si le réseau est très lent. AbortSignal.timeout() libère proprement le
-// verrou et rejette la promesse en attente avec une DOMException 'TimeoutError'.
+// Le SDK utilise ce verrou pour sérialiser les opérations de token (lecture ET
+// refresh) entre onglets. Tous les onglets partagent le même verrou (même nom,
+// dérivé de l'URL Supabase).
+//
+// POURQUOI PAS DE TIMEOUT :
+// Un timeout (même long) sur l'ACQUISITION du verrou provoque des erreurs
+// sur TOUTES les requêtes DB des onglets en attente si l'onglet détenteur
+// prend plus longtemps que prévu (réseau lent, onglet suspendu par le navigateur
+// mobile, etc.). On attend donc indéfiniment : les refreshs de token durent
+// 1-5 s en conditions normales, et le navigateur libère automatiquement le
+// verrou à la fermeture / navigation de l'onglet → pas de deadlock permanent.
 function customLock(name, _acquireTimeout, fn) {
   if (typeof navigator !== 'undefined' && navigator.locks) {
-    // AbortSignal.timeout disponible Chrome 103+, Firefox 100+, Safari 16+ (2022)
-    const signal = AbortSignal.timeout(60_000)
-    return navigator.locks.request(name, { signal }, fn)
+    return navigator.locks.request(name, fn)
   }
   // Fallback : Firefox en navigation privée et vieux navigateurs sans Web Locks
   return fn()
@@ -37,8 +39,9 @@ export const supabase = supabaseUrl && supabaseAnonKey
         // la seconde trouvant le verifier PKCE déjà consommé → erreur 401.
         detectSessionInUrl: false,
         flowType: 'pkce',
-        // Verrou 60 s : élimine les isAcquireTimeout sur les requêtes normales
-        // tout en évitant les deadlocks permanents sur réseau très lent / onglet freezé.
+        // Verrou sans timeout : attend indéfiniment l'acquisition du lock.
+        // Élimine les TimeoutError sur les requêtes DB quand un autre onglet
+        // détient le verrou pendant un refresh de token. Voir customLock ci-dessus.
         lock: customLock,
       },
     })

@@ -128,8 +128,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // ── Initialisation ───────────────────────────────────────────────────────
-  // Idempotente : peut être appelée plusieurs fois sans effet de bord.
-  // Elle hydrate simplement le store avec la session actuelle.
+  // Idempotente ET concurrency-safe : App.vue et le router guard l'appellent
+  // presque simultanément au démarrage. Sans protection, les deux passeraient
+  // le garde `initialized` (encore false) et lanceraient deux getSession() +
+  // fetchProfile() en parallèle, doublant la contention sur le Web Lock.
+  // Le cache _initPromise garantit qu'un seul appel réel est en vol à la fois :
+  // les appelants suivants reçoivent la même promesse et attendent le résultat.
+  let _initPromise = null
+
   async function init() {
     if (!supabase) {
       initialized.value = true
@@ -138,29 +144,36 @@ export const useAuthStore = defineStore('auth', () => {
     // Garde d'idempotence : onAuthStateChange a peut-être déjà tout hydraté.
     if (initialized.value) return
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
+    // Si un init est déjà en cours, joindre la même promesse plutôt que d'en
+    // lancer une deuxième.
+    if (_initPromise) return _initPromise
 
-      if (session?.user) {
-        user.value = session.user
-        if (!profile.value || profile.value.id !== session.user.id) {
-          await fetchProfile(session.user.id)
+    _initPromise = (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          user.value = session.user
+          if (!profile.value || profile.value.id !== session.user.id) {
+            await fetchProfile(session.user.id)
+          }
+        } else {
+          user.value    = null
+          profile.value = null
         }
-      } else {
-        user.value    = null
-        profile.value = null
+      } catch (err) {
+        // getSession() peut échouer en cas d'erreur réseau ou d'anomalie du
+        // verrou Web Locks. On loggue mais on ne bloque pas l'app.
+        console.warn('[auth] init error :', err)
+      } finally {
+        // Toujours positionner initialized, même en cas d'exception,
+        // pour éviter que l'app reste bloquée en état "auth non initialisée".
+        initialized.value = true
+        _initPromise = null
       }
-    } catch (err) {
-      // getSession() peut lever une DOMException 'TimeoutError' si le verrou
-      // Web Locks expire (réseau très lent ou onglet freezé).
-      // On loggue l'erreur mais on ne bloque pas l'app : l'utilisateur sera
-      // considéré comme non connecté et pourra réessayer.
-      console.warn('[auth] init error (lock timeout ou réseau) :', err)
-    } finally {
-      // Toujours positionner initialized, même en cas d'exception,
-      // pour éviter que l'app reste bloquée en état "auth non initialisée".
-      initialized.value = true
-    }
+    })()
+
+    return _initPromise
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
