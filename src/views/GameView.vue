@@ -842,6 +842,9 @@ async function checkAndFillIfCompleted() {
             data.time_seconds,
             data.verify_count || 0,
           );
+          // Persister le temps correct en localStorage pour éviter qu'un rechargement
+          // restaure elapsedTime=0 et déclenche un upsert Supabase parasite
+          saveGameState();
         }
       }
     } catch (e) {

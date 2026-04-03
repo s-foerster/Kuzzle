@@ -176,15 +176,19 @@ const isTutorialOpen = ref(false);
 const currentYear = new Date().getFullYear();
 const themePickerOpen = ref(false);
 const themePickerRef = ref(null);
-const seasonalBannerDismissed = ref(false);
+const SEASONAL_BANNER_KEY = "hearts-seasonal-banner-dismissed";
+const seasonalBannerDismissedId = ref(
+  localStorage.getItem(SEASONAL_BANNER_KEY),
+);
 const premiumNudge = ref(false);
 let premiumNudgeTimer = null;
 
-/** Afficher le banner saisonnier si applicable et non encore vu cette session */
+/** Afficher le banner saisonnier si applicable et non encore vu (persisté par localStorage) */
 const showSeasonalBanner = computed(
   () =>
     themeComposable.shouldSuggestSeasonal.value &&
-    !seasonalBannerDismissed.value,
+    seasonalBannerDismissedId.value !==
+      themeComposable.suggestedTheme.value?.id,
 );
 
 // Afficher le bouton "retour" uniquement sur les pages de jeu
@@ -213,14 +217,20 @@ function goToPremium() {
 }
 
 function applySeasonalTheme() {
-  if (themeComposable.suggestedTheme.value) {
-    themeComposable.setTheme(themeComposable.suggestedTheme.value.id);
+  const theme = themeComposable.suggestedTheme.value;
+  if (theme) {
+    themeComposable.setTheme(theme.id);
+    seasonalBannerDismissedId.value = theme.id;
+    localStorage.setItem(SEASONAL_BANNER_KEY, theme.id);
   }
-  seasonalBannerDismissed.value = true;
 }
 
 function dismissSeasonalBanner() {
-  seasonalBannerDismissed.value = true;
+  const theme = themeComposable.suggestedTheme.value;
+  if (theme) {
+    seasonalBannerDismissedId.value = theme.id;
+    localStorage.setItem(SEASONAL_BANNER_KEY, theme.id);
+  }
 }
 
 // Fermer le dropdown en cliquant à l'extérieur

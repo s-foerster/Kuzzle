@@ -147,7 +147,7 @@ export function useGame() {
             if (data.verifyCount !== undefined) {
               verifyCount.value = data.verifyCount;
             }
-            checkWin();
+            checkWin(true);
             return;
           }
         }
@@ -271,7 +271,9 @@ export function useGame() {
   });
 
   // Vérifier si le joueur a gagné
-  function checkWin() {
+  // fromRestore = true quand appelé depuis loadGameState() (rechargement de page)
+  // → ne pas marquer isWonByUserInSession pour éviter un upsert Supabase parasite
+  function checkWin(fromRestore = false) {
     if (!puzzle.value || !puzzle.value.solution) return;
 
     const puzzleSize = puzzle.value.solution.length;
@@ -291,7 +293,9 @@ export function useGame() {
     const wasNotWon = !isWon.value;
     isWon.value = true;
     if (wasNotWon) {
-      isWonByUserInSession.value = true;
+      if (!fromRestore) {
+        isWonByUserInSession.value = true;
+      }
       stopTimer();
       saveLevelStats(getCurrentLevelId(), elapsedTime.value, verifyCount.value);
       saveGameState();
