@@ -71,16 +71,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg);
   background-image:
-    radial-gradient(
-      ellipse at 20% 50%,
+    radial-gradient(ellipse at 20% 50%,
       rgba(224, 90, 110, 0.06) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse at 80% 20%,
+      transparent 60%),
+    radial-gradient(ellipse at 80% 20%,
       rgba(255, 140, 105, 0.05) 0%,
-      transparent 50%
-    );
+      transparent 50%);
   background-attachment: fixed;
   color: var(--color-text);
   line-height: 1.6;
@@ -96,13 +92,16 @@ body {
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--color-bg-muted);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-primary-light);
   border-radius: 8px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-primary);
 }
@@ -117,27 +116,35 @@ body {
 .text-center {
   text-align: center;
 }
+
 .mt-1 {
   margin-top: 0.5rem;
 }
+
 .mt-2 {
   margin-top: 1rem;
 }
+
 .mt-3 {
   margin-top: 1.5rem;
 }
+
 .mt-4 {
   margin-top: 2rem;
 }
+
 .mb-1 {
   margin-bottom: 0.5rem;
 }
+
 .mb-2 {
   margin-bottom: 1rem;
 }
+
 .mb-3 {
   margin-bottom: 1.5rem;
 }
+
 .mb-4 {
   margin-bottom: 2rem;
 }
@@ -148,11 +155,13 @@ body {
     font-size: 14px;
   }
 }
+
 @media (max-width: 480px) {
   html {
     font-size: 13px;
   }
 }
+
 @media (max-width: 380px) {
   html {
     font-size: 12px;
@@ -164,4 +173,14 @@ body {
   .no-print {
     display: none !important;
   }
+}
+
+/* --- Effets sur les icônes de thème --- */
+.icon-theme {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.icon-theme:hover {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 }

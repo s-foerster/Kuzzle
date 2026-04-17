@@ -142,7 +142,6 @@ const ariaLabel = computed(() => {
 .icon {
   width: 60%;
   height: 60%;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
 }
 
 .icon-heart {
