@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { generateDailyPuzzle, generatePuzzleHeartsFirst } from './src/algorithms/puzzleGenerator.js';
-import { generateDailyLumizle } from './src/algorithms/lumizle/puzzleFactory.js';
+import { generateLogicalDailyLumizle, pickLogicalDailyRulePack } from './src/algorithms/lumizle/puzzleFactory.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +27,12 @@ let puzzleCache = {};
 
 // Cache Lumizle en mémoire
 let lumizleCache = {};
+
+function hasLumizleClueQuality(entry) {
+  const quality = entry?.puzzle?.metadata?.clueQuality;
+  if (!quality) return false;
+  return !quality.requireAllLightInvalid || quality.allUnknownsAsLightValid === false;
+}
 
 // Charger le cache depuis le disque au démarrage
 function loadCache() {
@@ -323,7 +329,7 @@ app.get('/api/lumizle-daily', async (req, res) => {
   console.log(`📥 Requête Lumizle pour ${todayKey}`);
 
   // Vérifier le cache
-  if (lumizleCache[todayKey]) {
+  if (lumizleCache[todayKey] && hasLumizleClueQuality(lumizleCache[todayKey])) {
     console.log(`✅ Puzzle Lumizle trouvé en cache (${todayKey})`);
     return res.json({
       success: true,
@@ -333,13 +339,20 @@ app.get('/api/lumizle-daily', async (req, res) => {
       generatedAt: lumizleCache[todayKey].generatedAt
     });
   }
+  if (lumizleCache[todayKey]) {
+    console.log(`♻️ Cache Lumizle obsolète pour ${todayKey}, régénération avec qualité d'indices`);
+  }
 
   // Générer un nouveau puzzle
   console.log(`⚙️ Génération puzzle Lumizle pour ${todayKey}...`);
   const startTime = Date.now();
 
   try {
-    const puzzle = generateDailyLumizle(todayKey);
+    const pack = pickLogicalDailyRulePack(todayKey);
+    const puzzle = generateLogicalDailyLumizle(todayKey, {
+      timeoutMs: pack.tier === 'expert' ? 180000 : 90000,
+      maxGenerationAttempts: pack.tier === 'expert' ? 8 : 5,
+    });
     const generationTime = Date.now() - startTime;
 
     if (!puzzle) {
@@ -359,6 +372,7 @@ app.get('/api/lumizle-daily', async (req, res) => {
         metadata: puzzle.metadata,
       },
       generatedAt: new Date().toISOString(),
+      metadata: { dateKey: todayKey, version: 'logical-rule-packs-v1', rulePackId: pack.id },
     };
 
     saveLumizleCache();

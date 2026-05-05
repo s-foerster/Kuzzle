@@ -22,6 +22,20 @@ export const CELL_DARK = 1;
 export const CELL_LIGHT = 2;
 
 const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+const DIAG_DIRS = [[1, 1], [1, -1]];
+
+function isBorderCell(size, r, c) {
+  return r === 0 || c === 0 || r === size - 1 || c === size - 1;
+}
+
+function countOrthogonalNeighbors(grid, size, r, c, cellVal) {
+  let count = 0;
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === cellVal) count++;
+  }
+  return count;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers BFS
@@ -280,9 +294,11 @@ const DARK_REGION_SIZE = {
   getViolatingCells(grid, size, params = { n: 2 }) {
     const components = getComponents(grid, size, [CELL_DARK]);
     const violating = new Set();
+    const hasUnknown = grid.some(row => row.some(v => v === CELL_UNKNOWN));
     for (const comp of components) {
-      // Violant si le groupe dépasse n ET n'a plus de voisin inconnu pour se "séparer"
-      if (comp.length > params.n) {
+      // Trop grand: violation immédiate. Trop petit: violation seulement si la
+      // grille est complète, sinon le groupe peut encore être agrandi.
+      if (comp.length > params.n || (!hasUnknown && comp.length !== params.n)) {
         for (const [r, c] of comp) violating.add(`${r},${c}`);
       }
     }
@@ -483,6 +499,293 @@ const NO_3_IN_A_ROW_LIGHT = {
           violating.add(`${r},${c}`); violating.add(`${r + 1},${c}`); violating.add(`${r + 2},${c}`);
         }
       }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NO_3_DIAGONAL_DARK - pas de diagonale de 3 cellules sombres
+// ---------------------------------------------------------------------------
+const NO_3_DIAGONAL_DARK = {
+  id: 'NO_3_DIAGONAL_DARK',
+  name: 'Max 2 sombres en diagonale',
+  description: 'Pas de 3 cellules sombres consécutives en diagonale',
+  icon: '◩',
+  previewSolution: [
+    [1, 2, 2],
+    [2, 1, 2],
+    [2, 2, 2],
+  ],
+
+  check(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        for (const [dr, dc] of DIAG_DIRS) {
+          const r2 = r + 2 * dr, c2 = c + 2 * dc;
+          if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) continue;
+          if (grid[r][c] === CELL_DARK && grid[r + dr][c + dc] === CELL_DARK && grid[r2][c2] === CELL_DARK) return false;
+        }
+      }
+    }
+    return true;
+  },
+
+  checkPartial(grid, size) {
+    return this.check(grid, size);
+  },
+
+  getViolatingCells(grid, size) {
+    const violating = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        for (const [dr, dc] of DIAG_DIRS) {
+          const r2 = r + 2 * dr, c2 = c + 2 * dc;
+          if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) continue;
+          if (grid[r][c] === CELL_DARK && grid[r + dr][c + dc] === CELL_DARK && grid[r2][c2] === CELL_DARK) {
+            violating.add(`${r},${c}`);
+            violating.add(`${r + dr},${c + dc}`);
+            violating.add(`${r2},${c2}`);
+          }
+        }
+      }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NO_3_DIAGONAL_LIGHT - pas de diagonale de 3 cellules claires
+// ---------------------------------------------------------------------------
+const NO_3_DIAGONAL_LIGHT = {
+  id: 'NO_3_DIAGONAL_LIGHT',
+  name: 'Max 2 claires en diagonale',
+  description: 'Pas de 3 cellules claires consécutives en diagonale',
+  icon: '◪',
+  previewSolution: [
+    [2, 1, 1],
+    [1, 2, 1],
+    [1, 1, 1],
+  ],
+
+  check(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        for (const [dr, dc] of DIAG_DIRS) {
+          const r2 = r + 2 * dr, c2 = c + 2 * dc;
+          if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) continue;
+          if (grid[r][c] === CELL_LIGHT && grid[r + dr][c + dc] === CELL_LIGHT && grid[r2][c2] === CELL_LIGHT) return false;
+        }
+      }
+    }
+    return true;
+  },
+
+  checkPartial(grid, size) {
+    return this.check(grid, size);
+  },
+
+  getViolatingCells(grid, size) {
+    const violating = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        for (const [dr, dc] of DIAG_DIRS) {
+          const r2 = r + 2 * dr, c2 = c + 2 * dc;
+          if (r2 < 0 || r2 >= size || c2 < 0 || c2 >= size) continue;
+          if (grid[r][c] === CELL_LIGHT && grid[r + dr][c + dc] === CELL_LIGHT && grid[r2][c2] === CELL_LIGHT) {
+            violating.add(`${r},${c}`);
+            violating.add(`${r + dr},${c + dc}`);
+            violating.add(`${r2},${c2}`);
+          }
+        }
+      }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : NO_ISOLATED_DARK - aucune cellule sombre isolée
+// ---------------------------------------------------------------------------
+const NO_ISOLATED_DARK = {
+  id: 'NO_ISOLATED_DARK',
+  name: 'Pas de sombre isolée',
+  description: 'Chaque cellule sombre doit toucher au moins une autre cellule sombre',
+  icon: '▣',
+  previewSolution: [
+    [1, 1, 2],
+    [2, 2, 2],
+    [2, 1, 1],
+  ],
+
+  check(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (grid[r][c] === CELL_DARK && countOrthogonalNeighbors(grid, size, r, c, CELL_DARK) === 0) return false;
+      }
+    }
+    return true;
+  },
+
+  checkPartial(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (grid[r][c] !== CELL_DARK) continue;
+        const hasDarkNeighbor = countOrthogonalNeighbors(grid, size, r, c, CELL_DARK) > 0;
+        if (hasDarkNeighbor) continue;
+        const hasUnknownNeighbor = DIRS.some(([dr, dc]) => {
+          const nr = r + dr, nc = c + dc;
+          return nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_UNKNOWN;
+        });
+        if (!hasUnknownNeighbor) return false;
+      }
+    }
+    return true;
+  },
+
+  getViolatingCells(grid, size) {
+    const violating = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (grid[r][c] === CELL_DARK && countOrthogonalNeighbors(grid, size, r, c, CELL_DARK) === 0) {
+          const hasUnknownNeighbor = DIRS.some(([dr, dc]) => {
+            const nr = r + dr, nc = c + dc;
+            return nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_UNKNOWN;
+          });
+          if (!hasUnknownNeighbor) violating.add(`${r},${c}`);
+        }
+      }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : DARK_MAX_DEGREE - les régions sombres forment des chemins sans branche
+// ---------------------------------------------------------------------------
+const DARK_MAX_DEGREE = {
+  id: 'DARK_MAX_DEGREE',
+  name: 'Chemins sombres sans branche',
+  description: 'Une cellule sombre ne peut pas toucher plus de 2 cellules sombres',
+  icon: '⌁',
+  previewSolution: [
+    [1, 1, 2],
+    [2, 1, 2],
+    [2, 2, 2],
+  ],
+
+  check(grid, size) {
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (grid[r][c] === CELL_DARK && countOrthogonalNeighbors(grid, size, r, c, CELL_DARK) > 2) return false;
+      }
+    }
+    return true;
+  },
+
+  checkPartial(grid, size) {
+    return this.check(grid, size);
+  },
+
+  getViolatingCells(grid, size) {
+    const violating = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (grid[r][c] === CELL_DARK && countOrthogonalNeighbors(grid, size, r, c, CELL_DARK) > 2) {
+          violating.add(`${r},${c}`);
+          for (const [dr, dc] of DIRS) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_DARK) violating.add(`${nr},${nc}`);
+          }
+        }
+      }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : DARK_REGIONS_TOUCH_BORDER - chaque région sombre touche un bord
+// ---------------------------------------------------------------------------
+const DARK_REGIONS_TOUCH_BORDER = {
+  id: 'DARK_REGIONS_TOUCH_BORDER',
+  name: 'Régions sombres au bord',
+  description: 'Chaque région sombre doit toucher un bord de la grille',
+  icon: '▤',
+  previewSolution: [
+    [1, 1, 2],
+    [2, 2, 2],
+    [2, 1, 1],
+  ],
+
+  check(grid, size) {
+    return getComponents(grid, size, [CELL_DARK]).every(comp =>
+      comp.some(([r, c]) => isBorderCell(size, r, c))
+    );
+  },
+
+  checkPartial(grid, size) {
+    const reachable = getComponents(grid, size, [CELL_DARK, CELL_UNKNOWN]);
+    for (const comp of reachable) {
+      const hasDark = comp.some(([r, c]) => grid[r][c] === CELL_DARK);
+      if (!hasDark) continue;
+      const canReachBorder = comp.some(([r, c]) => isBorderCell(size, r, c));
+      if (!canReachBorder) return false;
+    }
+    return true;
+  },
+
+  getViolatingCells(grid, size) {
+    const violating = new Set();
+    const reachable = getComponents(grid, size, [CELL_DARK, CELL_UNKNOWN]);
+    for (const comp of reachable) {
+      const darks = comp.filter(([r, c]) => grid[r][c] === CELL_DARK);
+      if (darks.length === 0) continue;
+      const canReachBorder = comp.some(([r, c]) => isBorderCell(size, r, c));
+      if (!canReachBorder) {
+        for (const [r, c] of darks) violating.add(`${r},${c}`);
+      }
+    }
+    return violating;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Règle : DARK_REGION_COUNT_EXACT - nombre exact de régions sombres
+// ---------------------------------------------------------------------------
+const DARK_REGION_COUNT_EXACT = {
+  id: 'DARK_REGION_COUNT_EXACT',
+  name: 'Nombre exact de régions sombres',
+  description: 'Il doit y avoir exactement {n} région(s) sombre(s)',
+  icon: '◼',
+  previewSolution: [
+    [1, 1, 2],
+    [2, 2, 2],
+    [2, 1, 1],
+  ],
+
+  check(grid, size, params = { n: 2 }) {
+    return getComponents(grid, size, [CELL_DARK]).length === params.n;
+  },
+
+  checkPartial(grid, size, params = { n: 2 }) {
+    const reachable = getComponents(grid, size, [CELL_DARK, CELL_UNKNOWN]);
+    const minRegions = reachable.filter(comp =>
+      comp.some(([r, c]) => grid[r][c] === CELL_DARK)
+    ).length;
+    const flat = grid.flat();
+    const unknown = flat.filter(v => v === CELL_UNKNOWN).length;
+    const dark = flat.filter(v => v === CELL_DARK).length;
+    if (unknown === 0) return minRegions === params.n;
+    return minRegions <= params.n && dark + unknown >= params.n;
+  },
+
+  getViolatingCells(grid, size, params = { n: 2 }) {
+    const components = getComponents(grid, size, [CELL_DARK]);
+    if (components.length === params.n) return new Set();
+    const violating = new Set();
+    if (components.length > params.n) {
+      for (const comp of components) for (const [r, c] of comp) violating.add(`${r},${c}`);
     }
     return violating;
   },
@@ -908,6 +1211,12 @@ export const ALL_RULES = {
   NO_2X2_LIGHT,
   NO_3_IN_A_ROW_DARK,
   NO_3_IN_A_ROW_LIGHT,
+  NO_3_DIAGONAL_DARK,
+  NO_3_DIAGONAL_LIGHT,
+  NO_ISOLATED_DARK,
+  DARK_MAX_DEGREE,
+  DARK_REGIONS_TOUCH_BORDER,
+  DARK_REGION_COUNT_EXACT,
   ROW_EXACT_DARK,
   ROW_EXACT_LIGHT,
   COL_EXACT_DARK,

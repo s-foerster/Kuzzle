@@ -9,14 +9,16 @@
  * Les cellules fixes (indices du puzzle) sont non-modifiables par le joueur.
  */
 
-import { ref, computed } from 'vue';
-import { getAllViolatingCells, CELL_UNKNOWN, CELL_DARK, CELL_LIGHT } from '../algorithms/lumizle/rules.js';
+import { ref, computed, onUnmounted } from 'vue';
+import { checkAllRules, getAllViolatingCells, CELL_UNKNOWN, CELL_DARK, CELL_LIGHT } from '../algorithms/lumizle/rules.js';
 
 const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 const LS_STATE_PREFIX = 'lumizle-game-state';
 const LS_COMPLETED_KEY = 'lumizle-completed-levels';
+const LS_STATS_KEY = 'lumizle-level-stats';
+const LS_STRICT_MODE_KEY = 'lumizle-strict-mode';
 const MAX_UNDO = 50;
 
 export function useLumizle() {
@@ -27,6 +29,20 @@ export function useLumizle() {
   const error = ref(null);
   const currentDate = ref('');     // 'YYYY-MM-DD' pour daily, id court pour practice
   const isPractice = ref(false);
+  const isWonByUserInSession = ref(false);
+
+  // ── Mode strict (cache les violations en temps réel) ──────────────────────
+  const strictMode = ref(false);
+  try {
+    strictMode.value = localStorage.getItem(LS_STRICT_MODE_KEY) === '1';
+  } catch (_) { /* ignore */ }
+
+  function toggleStrictMode() {
+    strictMode.value = !strictMode.value;
+    try {
+      localStorage.setItem(LS_STRICT_MODE_KEY, strictMode.value ? '1' : '0');
+    } catch (_) { /* ignore */ }
+  }
 
   // ── Undo ──────────────────────────────────────────────────────────────────
   const undoHistory = ref([]);
@@ -35,7 +51,12 @@ export function useLumizle() {
   const elapsedSeconds = ref(0);
   const isTimerStarted = ref(false);
   const isPaused = ref(false);
+  const _timerFrozen = ref(false);
   let timerInterval = null;
+
+  function freezeTimer(frozen) {
+    _timerFrozen.value = frozen;
+  }
 
   const formattedTime = computed(() => {
     const s = elapsedSeconds.value;
@@ -46,14 +67,20 @@ export function useLumizle() {
 
   function startTimer() {
     if (timerInterval) return;
+    isTimerStarted.value = true;
+    isPaused.value = false;
     timerInterval = setInterval(() => {
-      if (!isPaused.value) elapsedSeconds.value++;
+      if (!isPaused.value && !_timerFrozen.value && !isWon.value) {
+        elapsedSeconds.value++;
+      }
     }, 1000);
   }
 
   function stopTimer() {
-    clearInterval(timerInterval);
-    timerInterval = null;
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
   }
 
   function resetTimer() {
@@ -61,10 +88,13 @@ export function useLumizle() {
     elapsedSeconds.value = 0;
     isTimerStarted.value = false;
     isPaused.value = false;
+    _timerFrozen.value = false;
   }
 
   function togglePause() {
+    if (!isTimerStarted.value || isWon.value) return;
     isPaused.value = !isPaused.value;
+    saveGameState();
   }
 
   // ── Helpers grille ───────────────────────────────────────────────────────
@@ -110,11 +140,18 @@ export function useLumizle() {
   });
 
   // ── Violations en temps réel ───────────────────────────────────────────────
-  const violatingCells = computed(() => {
+  // Calcul brut (utilisé par isWon) — toujours effectué.
+  const rawViolatingCells = computed(() => {
     if (!puzzle.value) return new Set();
     const size = getSize();
     const eff = buildEffectiveGrid();
     return getAllViolatingCells(eff, size, puzzle.value.rules);
+  });
+
+  // Exposé au UI — caché en mode strict pour forcer la déduction.
+  const violatingCells = computed(() => {
+    if (strictMode.value) return new Set();
+    return rawViolatingCells.value;
   });
 
   // ── Victoire ──────────────────────────────────────────────────────────────
@@ -130,8 +167,10 @@ export function useLumizle() {
       }
     }
 
-    // 2. Aucune violation de règle
-    if (violatingCells.value.size > 0) return false;
+    // 2. La grille complète doit satisfaire les règles, pas seulement éviter
+    // les violations visuelles partielles.
+    const eff = buildEffectiveGrid();
+    if (!checkAllRules(eff, size, puzzle.value.rules)) return false;
 
     return true;
   });
@@ -153,30 +192,38 @@ export function useLumizle() {
   // ── Interactions cellule ──────────────────────────────────────────────────
 
   /**
-   * Retourne la prochaine valeur dans le cycle : UNKNOWN → DARK → LIGHT → UNKNOWN.
+   * Retourne la prochaine valeur dans le cycle : vide → blanc → noir → vide.
    */
   function nextCellValue(current) {
-    if (current === CELL_UNKNOWN) return CELL_DARK;
-    if (current === CELL_DARK) return CELL_LIGHT;
+    if (current === CELL_UNKNOWN) return CELL_LIGHT;
+    if (current === CELL_LIGHT) return CELL_DARK;
     return CELL_UNKNOWN;
   }
 
+  function finishIfWon() {
+    if (!isWon.value || isWonByUserInSession.value) return;
+    isWonByUserInSession.value = true;
+    stopTimer();
+    saveLevelStats(currentDate.value, elapsedSeconds.value);
+  }
+
   /**
-   * Clic simple : cycle UNKNOWN → DARK → LIGHT → UNKNOWN.
+   * Clic simple : cycle vide → blanc → noir → vide.
    * Lance le timer au premier clic.
    */
   function handleCellClick(r, c) {
     if (!puzzle.value) return;
+    if (isWon.value || isPaused.value) return;
     if (fixedCells.value.has(`${r},${c}`)) return; // cellule fixe
 
     if (!isTimerStarted.value) {
-      isTimerStarted.value = true;
       startTimer();
     }
 
     pushHistory();
     const current = gameState.value[r][c];
     gameState.value[r][c] = nextCellValue(current);
+    finishIfWon();
     saveGameState();
   }
 
@@ -186,10 +233,17 @@ export function useLumizle() {
    */
   function handleCellDrag(r, c, dragTargetValue) {
     if (!puzzle.value) return;
+    if (isWon.value || isPaused.value) return;
     if (fixedCells.value.has(`${r},${c}`)) return;
     if (gameState.value[r][c] === dragTargetValue) return; // déjà à la valeur cible
 
+    if (!isTimerStarted.value) {
+      startTimer();
+    }
+
+    pushHistory();
     gameState.value[r][c] = dragTargetValue;
+    finishIfWon();
     saveGameState();
   }
 
@@ -202,7 +256,12 @@ export function useLumizle() {
   function saveGameState() {
     if (!currentDate.value) return;
     try {
-      localStorage.setItem(lsKey(), JSON.stringify(gameState.value));
+      localStorage.setItem(lsKey(), JSON.stringify({
+        state: gameState.value,
+        elapsedSeconds: elapsedSeconds.value,
+        isTimerStarted: isTimerStarted.value,
+        isPaused: isPaused.value,
+      }));
     } catch (_) { /* quota */ }
   }
 
@@ -212,10 +271,20 @@ export function useLumizle() {
       const raw = localStorage.getItem(lsKey());
       if (!raw) return false;
       const saved = JSON.parse(raw);
+      const savedState = Array.isArray(saved) ? saved : saved?.state;
       // Vérifier que la taille correspond
       const size = getSize();
-      if (!saved || saved.length !== size || saved[0]?.length !== size) return false;
-      gameState.value = saved;
+      if (!savedState || savedState.length !== size || savedState[0]?.length !== size) return false;
+      gameState.value = savedState;
+
+      if (!Array.isArray(saved)) {
+        if (typeof saved.elapsedSeconds === 'number') elapsedSeconds.value = saved.elapsedSeconds;
+        isTimerStarted.value = !!saved.isTimerStarted;
+        isPaused.value = !!saved.isPaused;
+        if (isTimerStarted.value && !isPaused.value && !isWon.value) {
+          startTimer();
+        }
+      }
       return true;
     } catch (_) {
       return false;
@@ -229,6 +298,7 @@ export function useLumizle() {
     const size = getSize();
     gameState.value = makeEmptyGameState(size);
     undoHistory.value = [];
+    isWonByUserInSession.value = false;
     resetTimer();
     saveGameState();
   }
@@ -239,6 +309,7 @@ export function useLumizle() {
     puzzle.value = puzzleData;
     currentDate.value = dateKey;
     isPractice.value = practice;
+    isWonByUserInSession.value = false;
     undoHistory.value = [];
 
     const size = puzzleData.metadata.gridSize;
@@ -274,11 +345,11 @@ export function useLumizle() {
   }
 
   /** Charge directement un puzzle pré-généré (practice). */
-  function initPracticePuzzle(puzzleData, id) {
+  function initPracticePuzzle(puzzleData, id, practice = true) {
     error.value = null;
     isLoading.value = false;
     resetTimer();
-    _loadPuzzleData(puzzleData, id, true);
+    _loadPuzzleData(puzzleData, id, practice);
   }
 
   /** Remplit la grille avec la solution (niveau déjà complété). */
@@ -294,6 +365,36 @@ export function useLumizle() {
       }
     }
     gameState.value = newState;
+    isWonByUserInSession.value = false;
+    stopTimer();
+    isTimerStarted.value = false;
+
+    const stats = getLevelStats(currentDate.value);
+    if (stats) {
+      elapsedSeconds.value = stats.elapsedSeconds;
+    }
+    saveGameState();
+  }
+
+  // ── Statistiques par niveau ───────────────────────────────────────────────
+
+  function saveLevelStats(levelId, time) {
+    if (!levelId) return;
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_STATS_KEY) || '{}');
+      all[levelId] = { elapsedSeconds: time };
+      localStorage.setItem(LS_STATS_KEY, JSON.stringify(all));
+    } catch (_) { /* ignore */ }
+  }
+
+  function getLevelStats(levelId) {
+    if (!levelId) return null;
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_STATS_KEY) || '{}');
+      return all[levelId] || null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Niveaux complétés ─────────────────────────────────────────────────────
@@ -316,6 +417,10 @@ export function useLumizle() {
     return getCompletedLevels().includes(id);
   }
 
+  onUnmounted(() => {
+    stopTimer();
+  });
+
   return {
     // State
     puzzle,
@@ -324,10 +429,15 @@ export function useLumizle() {
     error,
     currentDate,
     isPractice,
+    isWonByUserInSession,
     fixedCells,
 
     // Violations (real-time)
     violatingCells,
+
+    // Mode strict
+    strictMode,
+    toggleStrictMode,
 
     // Win
     isWon,
@@ -338,6 +448,7 @@ export function useLumizle() {
     isTimerStarted,
     isPaused,
     togglePause,
+    freezeTimer,
     resetTimer,
 
     // Undo
@@ -361,6 +472,8 @@ export function useLumizle() {
 
     // Persistence
     saveGameState,
+    getLevelStats,
+    saveLevelStats,
 
     // Completion tracking
     getCompletedLevels,

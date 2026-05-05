@@ -62,11 +62,54 @@ function creates3InRow(grid, size, r, c, val, ruleIds) {
   return false;
 }
 
+function creates3Diagonal(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_3_DIAGONAL_DARK' : 'NO_3_DIAGONAL_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  for (const [dr, dc] of [[1, 1], [1, -1]]) {
+    for (let start = -2; start <= 0; start++) {
+      const pts = [
+        [r + start * dr, c + start * dc],
+        [r + (start + 1) * dr, c + (start + 1) * dc],
+        [r + (start + 2) * dr, c + (start + 2) * dc],
+      ];
+      if (pts.every(([pr, pc]) => get(pr, pc) === val)) return true;
+    }
+  }
+  return false;
+}
+
+function createsDarkBranch(grid, size, r, c, ruleIds) {
+  if (!ruleIds.has('DARK_MAX_DEGREE')) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? CELL_DARK : grid[pr][pc];
+  };
+  const cells = [[r, c]];
+  for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_DARK) cells.push([nr, nc]);
+  }
+  for (const [cr, cc] of cells) {
+    let darkNeighbors = 0;
+    for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+      if (get(cr + dr, cc + dc) === CELL_DARK) darkNeighbors++;
+    }
+    if (darkNeighbors > 2) return true;
+  }
+  return false;
+}
+
 /** Retourne les valeurs localement autorisées pour (r,c). */
 function localDomain(grid, size, r, c, ruleIds) {
   return [CELL_DARK, CELL_LIGHT].filter(val => {
     if (creates2x2(grid, size, r, c, val, ruleIds)) return false;
     if (creates3InRow(grid, size, r, c, val, ruleIds)) return false;
+    if (creates3Diagonal(grid, size, r, c, val, ruleIds)) return false;
+    if (val === CELL_DARK && createsDarkBranch(grid, size, r, c, ruleIds)) return false;
 
     // ── SYMMETRY_180 : la cellule symétrique doit être compatible ──
     if (ruleIds.has('SYMMETRY_180')) {
@@ -214,8 +257,10 @@ export function countSolutions(initialGrid, size, rules, maxSolutions = 2) {
 /**
  * Trouve et retourne UNE solution valide, ou null si aucune n'existe.
  * Si rng est fourni, randomise l'ordre d'essai des valeurs pour générer des solutions variées.
+ *
+ * Un budget d'itérations est appliqué pour éviter les hangs sur grilles complexes.
  */
-export function findSolution(initialGrid, size, rules, rng = null) {
+export function findSolution(initialGrid, size, rules, rng = null, maxIterations = 5_000_000, timeoutMs = 0) {
   const ruleIds = buildRuleIds(rules);
   const unknownCells = [];
   for (let r = 0; r < size; r++)
@@ -230,8 +275,15 @@ export function findSolution(initialGrid, size, rules, rng = null) {
 
   const work = initialGrid.map(row => [...row]);
   let found = null;
+  let iterations = 0;
+  const tStart = Date.now();
+  const hasTimeout = timeoutMs > 0;
 
   function backtrack(remaining) {
+    iterations++;
+    if (iterations > maxIterations) return true; // budget dépassé : on retourne pour stopper la récursion (found peut être null)
+    // Vérification timeout toutes les 1024 itérations (perf)
+    if (hasTimeout && (iterations & 1023) === 0 && (Date.now() - tStart) > timeoutMs) return true;
     if (remaining.length === 0) {
       if (checkAllRules(work, size, rules)) {
         found = work.map(row => [...row]);
@@ -266,7 +318,10 @@ export function findSolution(initialGrid, size, rules, rng = null) {
 
     for (const val of domain) {
       work[r][c] = val;
-      if (checkAllPartialRules(work, size, rules) && backtrack(nextRemaining)) return true;
+      if (checkAllPartialRules(work, size, rules) && backtrack(nextRemaining)) {
+        if (iterations > maxIterations) return true;
+        return true;
+      }
     }
 
     work[r][c] = CELL_UNKNOWN;

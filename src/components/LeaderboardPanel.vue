@@ -80,11 +80,12 @@
           <span class="lb-metrics">
             <span class="lb-time">{{ formatTime(entry.time_seconds) }}</span>
             <span
+              v-if="showVerifyMetric"
               class="lb-verif"
-              :class="{ 'lb-verif--perfect': entry.verify_count === 0 }"
-              :title="`${entry.verify_count} vérification${entry.verify_count !== 1 ? 's' : ''}`"
+              :class="{ 'lb-verif--perfect': getVerifyCount(entry) === 0 }"
+              :title="`${getVerifyCount(entry)} vérification${getVerifyCount(entry) !== 1 ? 's' : ''}`"
             >
-              {{ entry.verify_count === 0 ? "🏆" : `${entry.verify_count}✓` }}
+              {{ getVerifyCount(entry) === 0 ? "🏆" : `${getVerifyCount(entry)}✓` }}
             </span>
           </span>
         </div>
@@ -119,15 +120,16 @@
             formatTime(currentUserEntry.time_seconds)
           }}</span>
           <span
+            v-if="showVerifyMetric"
             class="lb-verif"
             :class="{
-              'lb-verif--perfect': currentUserEntry.verify_count === 0,
+              'lb-verif--perfect': getVerifyCount(currentUserEntry) === 0,
             }"
           >
             {{
-              currentUserEntry.verify_count === 0
+              getVerifyCount(currentUserEntry) === 0
                 ? "🏆"
-                : `${currentUserEntry.verify_count}✓`
+                : `${getVerifyCount(currentUserEntry)}✓`
             }}
           </span>
         </span>
@@ -179,6 +181,8 @@ const displayedEntries = computed(() =>
   entries.value.length <= 3 ? entries.value : entries.value,
 );
 
+const showVerifyMetric = computed(() => props.gameType === "hearts");
+
 // true si le bouton "voir plus" a été utilisé → on affiche tout ce qu'on a déjà
 const hasMore = computed(() => entries.value.length < total.value);
 
@@ -192,6 +196,10 @@ function formatTime(seconds) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function getVerifyCount(entry) {
+  return entry?.verify_count ?? 0;
 }
 
 // Recharge automatiquement quand puzzleDate change

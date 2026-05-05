@@ -20,15 +20,14 @@
           <div class="game-card-arrow">›</div>
         </div>
 
-        <div class="game-card game-card--disabled">
+        <div class="game-card" @click="goToLumizle">
           <div class="game-card-icon">🔷</div>
           <div class="game-card-body">
             <h3>Lumizle</h3>
             <p>Colorez les cellules claires et sombres.</p>
-            <div class="game-card-badge game-card-badge--soon">
-              Bientôt disponible
-            </div>
+            <div class="game-card-badge">Quotidien</div>
           </div>
+          <div class="game-card-arrow">›</div>
         </div>
       </div>
     </section>
@@ -139,6 +138,10 @@ const formattedToday = computed(() =>
 // ── Navigation ───────────────────────────────────────────────────────────────
 function goToGame() {
   router.push("/game");
+}
+
+function goToLumizle() {
+  router.push("/lumizle");
 }
 
 // ── Niveaux practice Hearts ──────────────────────────────────────────────────

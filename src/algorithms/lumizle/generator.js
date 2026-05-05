@@ -21,6 +21,7 @@ import {
   checkAllRules,
   checkAllPartialRules,
 } from './rules.js';
+import { ensureClueQuality, evaluateClueQuality } from './clueQuality.js';
 import { SeededRandom } from '../../utils/seededRandom.js';
 
 const DIRS = [[0, 1], [0, -1], [1, 0], [-1, 0]];
@@ -68,6 +69,47 @@ function creates3InRow(grid, size, r, c, val, ruleIds) {
   return false;
 }
 
+function creates3Diagonal(grid, size, r, c, val, ruleIds) {
+  const ruleId = val === CELL_DARK ? 'NO_3_DIAGONAL_DARK' : 'NO_3_DIAGONAL_LIGHT';
+  if (!ruleIds.has(ruleId)) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? val : grid[pr][pc];
+  };
+  for (const [dr, dc] of [[1, 1], [1, -1]]) {
+    for (let start = -2; start <= 0; start++) {
+      const pts = [
+        [r + start * dr, c + start * dc],
+        [r + (start + 1) * dr, c + (start + 1) * dc],
+        [r + (start + 2) * dr, c + (start + 2) * dc],
+      ];
+      if (pts.every(([pr, pc]) => get(pr, pc) === val)) return true;
+    }
+  }
+  return false;
+}
+
+function createsDarkBranch(grid, size, r, c, ruleIds) {
+  if (!ruleIds.has('DARK_MAX_DEGREE')) return false;
+  const get = (pr, pc) => {
+    if (pr < 0 || pr >= size || pc < 0 || pc >= size) return -1;
+    return (pr === r && pc === c) ? CELL_DARK : grid[pr][pc];
+  };
+  const cells = [[r, c]];
+  for (const [dr, dc] of DIRS) {
+    const nr = r + dr, nc = c + dc;
+    if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === CELL_DARK) cells.push([nr, nc]);
+  }
+  for (const [cr, cc] of cells) {
+    let darkNeighbors = 0;
+    for (const [dr, dc] of DIRS) {
+      if (get(cr + dr, cc + dc) === CELL_DARK) darkNeighbors++;
+    }
+    if (darkNeighbors > 2) return true;
+  }
+  return false;
+}
+
 function buildRuleIds(rules) {
   const ruleIds = new Set(rules.map(r => r.id));
   for (const { id, params } of rules) {
@@ -83,6 +125,8 @@ function canPlace(grid, size, r, c, val, ruleIds) {
   if (grid[r][c] !== CELL_UNKNOWN) return false;
   if (creates2x2(grid, size, r, c, val, ruleIds)) return false;
   if (creates3InRow(grid, size, r, c, val, ruleIds)) return false;
+  if (creates3Diagonal(grid, size, r, c, val, ruleIds)) return false;
+  if (val === CELL_DARK && createsDarkBranch(grid, size, r, c, ruleIds)) return false;
 
   // SYMMETRY_180: la cellule symétrique doit être libre ou de même valeur
   if (ruleIds.has('SYMMETRY_180')) {
@@ -160,30 +204,24 @@ const BT_REQUIRED_RULES = new Set([
  * On place 1 à 3 graines aléatoires pour casser le déterminisme de l'arbre
  * puis on laisse le solveur (ultra-rapide, non-shufflé) finir le travail.
  */
-function generateSolutionProcedural(rng, size, rules, minLightRatio = 0.35, maxLightRatio = 0.65, maxRestarts = 500) {
+function generateSolutionProcedural(rng, size, rules, minLightRatio = 0.35, maxLightRatio = 0.65, maxRestarts = 500, timeoutMs = 15000) {
   const total = size * size;
   const ruleIds = buildRuleIds(rules);
+  const tStart = Date.now();
 
   for (let restart = 0; restart < maxRestarts; restart++) {
+    const remaining = timeoutMs - (Date.now() - tStart);
+    if (remaining <= 100) return null;
     const grid = Array.from({ length: size }, () => new Array(size).fill(CELL_UNKNOWN));
 
-    // On place 0 cellules pour l'instant (1 graine rend la grille NP-difficile aléatoirement)
-    const numSeeds = 0;
-    let validSeeds = true;
-    for (let i = 0; i < numSeeds; i++) {
-      const r = rng.randomInt(0, size);
-      const c = rng.randomInt(0, size);
-      const val = rng.random() < 0.5 ? CELL_DARK : CELL_LIGHT;
-      if (grid[r][c] === CELL_UNKNOWN && canPlace(grid, size, r, c, val, ruleIds)) {
-        grid[r][c] = val;
-      } else {
-        validSeeds = false; break;
-      }
-    }
-    if (!validSeeds) continue;
+    // Pas de graines (sinon MRV explose sur grandes grilles avec CONNECT_*).
+    // La diversité vient du rng passé à findSolution (inversion ordre domaine).
+    void ruleIds;
 
-    // Le solveur sans 'rng' utilise l'heuristique MRV complète et hyper-rapide
-    const solution = findSolution(grid, size, rules);
+    // Le solveur avec rng randomise l'ordre des valeurs pour varier les solutions
+    // Budget par tentative : restant / max(2, restarts_remaining/4)
+    const perAttemptBudget = Math.max(500, Math.floor(remaining / Math.max(2, (maxRestarts - restart) / 4)));
+    const solution = findSolution(grid, size, rules, rng, 5_000_000, perAttemptBudget);
 
     if (solution) {
       // On s'assure juste que le ratio de lumière est acceptable
@@ -210,11 +248,14 @@ function generateSolutionRSG(
   minLightRatio = 0.35,
   maxLightRatio = 0.65,
   maxAttempts = 1000,
+  timeoutMs = 10000,
 ) {
   const total = size * size;
   const ruleIds = buildRuleIds(rules);
+  const tStart = Date.now();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if ((Date.now() - tStart) > timeoutMs) return null;
     const grid = Array.from({ length: size }, () => new Array(size).fill(CELL_UNKNOWN));
 
     // ── Choisir deux germes aléatoires distincts ──────────────────────────
@@ -251,8 +292,11 @@ function generateSolutionRSG(
     let lightCount = 1, darkCount = 1;
     let remaining = total - 2;
     let ok = true;
+    let stuckIterations = 0;
+    const maxStuck = total * 4;
 
     while (remaining > 0) {
+      if (stuckIterations++ > maxStuck) { ok = false; break; }
       // Décider quelle couleur étendre en fonction du ratio courant
       const currentRatio = lightCount / (lightCount + darkCount);
       let frontier, val;
@@ -296,6 +340,7 @@ function generateSolutionRSG(
           if (val === CELL_LIGHT) lightCount++; else darkCount++;
           remaining--;
           placedOne = true;
+          stuckIterations = 0;
           break;
         } else {
           // Bloqué pour cette couleur : retirer de cette frontière
@@ -336,10 +381,24 @@ function generateSolutionRSG(
  * Génère une solution complète valide.
  * Choisit automatiquement RSG (rapide) ou BT (compatible toutes règles).
  */
-export function generateSolution(rng, size, rules, minLightRatio = 0.35, maxLightRatio = 0.65, maxAttempts = 1000) {
+export function generateSolution(rng, size, rules, minLightRatio = 0.35, maxLightRatio = 0.65, maxAttempts = 1000, timeoutMs = 30000) {
   const needsProcedural = rules.some(r => BT_REQUIRED_RULES.has(r.id));
-  if (needsProcedural) return generateSolutionProcedural(rng, size, rules, minLightRatio, maxLightRatio, 30000);
-  return generateSolutionRSG(rng, size, rules, minLightRatio, maxLightRatio, maxAttempts);
+  if (needsProcedural) return generateSolutionProcedural(rng, size, rules, minLightRatio, maxLightRatio, maxAttempts, timeoutMs);
+  // Heuristique : si plusieurs contraintes locales restrictives, RSG bloque facilement
+  // → tomber sur BT après un budget RSG limité
+  const restrictiveCount = rules.filter(r => /^NO_2X2|NO_PATTERN|NURIBOU/.test(r.id)).length;
+  const rsgBudget = restrictiveCount >= 2 ? Math.min(3000, timeoutMs / 4) : Math.min(timeoutMs, 10000);
+  const rsg = generateSolutionRSG(rng, size, rules, minLightRatio, maxLightRatio, maxAttempts, rsgBudget);
+  if (rsg) return rsg;
+  // Fallback BT avec le budget restant
+  const remaining = timeoutMs - rsgBudget;
+  if (remaining < 1000) return null;
+  return generateSolutionProcedural(rng, size, rules, minLightRatio, maxLightRatio, 200, remaining);
+}
+
+/** Force le générateur BT (utile pour les grandes grilles où RSG échoue). */
+export function generateSolutionBT(rng, size, rules, minLightRatio = 0.35, maxLightRatio = 0.65, maxRestarts = 500, timeoutMs = 15000) {
+  return generateSolutionProcedural(rng, size, rules, minLightRatio, maxLightRatio, maxRestarts, timeoutMs);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -359,9 +418,9 @@ export function generateSolution(rng, size, rules, minLightRatio = 0.35, maxLigh
  * @param {number}     clueRatio  - Proportion de cellules révélées (0.0 - 1.0)
  * @returns {number[][]}           Grille avec UNKNOWN là où le joueur joue
  */
-export function selectClues(solution, size, rng, clueRatio = 0.35) {
-  const grid = solution.map(row => [...row]);
+export function selectClues(solution, size, rng, clueRatio = 0.35, qualityOptions = {}) {
   const total = size * size;
+  const maxAttempts = qualityOptions.selectionAttempts ?? 20;
 
   // Construire une liste de toutes les cellules et la mélanger aléatoirement
   const allCells = [];
@@ -374,15 +433,30 @@ export function selectClues(solution, size, rng, clueRatio = 0.35) {
   // Nombre de cellules à révéler
   const clueCount = Math.max(3, Math.round(total * clueRatio));
 
-  // Mettre les cellules non-révélées à UNKNOWN
-  const hiddenCount = total - clueCount;
-  const toHide = shuffled.slice(0, hiddenCount); // les N premières seront cachées
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const grid = solution.map(row => [...row]);
+    const attemptCells = attempt === 0 ? shuffled : rng.shuffle(allCells);
 
-  for (const [r, c] of toHide) {
-    grid[r][c] = CELL_UNKNOWN;
+    // Mettre les cellules non-révélées à UNKNOWN
+    const hiddenCount = total - clueCount;
+    const toHide = attemptCells.slice(0, hiddenCount); // les N premières seront cachées
+
+    for (const [r, c] of toHide) {
+      grid[r][c] = CELL_UNKNOWN;
+    }
+
+    const repaired = ensureClueQuality(grid, solution, size, qualityOptions.rules ?? [], rng, qualityOptions);
+    if (repaired) return repaired.initialGrid;
   }
 
-  return grid;
+  // Fallback déterministe : garder la meilleure grille plutôt qu'échouer brutalement.
+  const fallbackGrid = solution.map(row => [...row]);
+  const hiddenCount = total - clueCount;
+  for (const [r, c] of shuffled.slice(0, hiddenCount)) {
+    fallbackGrid[r][c] = CELL_UNKNOWN;
+  }
+  const repaired = ensureClueQuality(fallbackGrid, solution, size, qualityOptions.rules ?? [], rng, qualityOptions);
+  return repaired?.initialGrid ?? fallbackGrid;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -396,6 +470,7 @@ export function generatePuzzle(seed, config = {}) {
     minLightRatio = 0.35,
     maxLightRatio = 0.65,
     clueRatio = 0.35, // proportion des cellules révélées (indices)
+    clueQuality = {},
   } = config;
 
   const rng = new SeededRandom(`${seed}_lumizle`);
@@ -409,12 +484,16 @@ export function generatePuzzle(seed, config = {}) {
   const t1 = Date.now();
 
   // ── Phase 2 : sélection aléatoire des indices ─────────────────────────
-  const initialGrid = selectClues(solution, size, rng, clueRatio);
+  const initialGrid = selectClues(solution, size, rng, clueRatio, { ...clueQuality, rules });
   const t2 = Date.now();
 
   const clueCount = initialGrid.reduce((s, row) => s + row.filter(v => v !== CELL_UNKNOWN).length, 0);
   const lightCount = solution.reduce((s, row) => s + row.filter(v => v === CELL_LIGHT).length, 0);
   const darkCount = size * size - lightCount;
+  const clueQualityMetrics = evaluateClueQuality(initialGrid, solution, size, rules, clueQuality);
+  if (!clueQualityMetrics.isValid) {
+    throw new Error(`Lumizle: indices initiaux insuffisants (${clueQualityMetrics.issues.join(', ')})`);
+  }
 
   return {
     initialGrid,
@@ -431,6 +510,15 @@ export function generatePuzzle(seed, config = {}) {
       selectionTime: t2 - t1,
       generationTime: t2 - t0,
       isUnique: false, // non vérifié, pas nécessaire
+      clueQuality: {
+        fixedDarkClues: clueQualityMetrics.fixedDarkClues,
+        openDarkRegions: clueQualityMetrics.openDarkRegions,
+        completeDarkRegions: clueQualityMetrics.completeDarkRegions,
+        allUnknownsAsLightValid: clueQualityMetrics.allUnknownsAsLightValid,
+        allUnknownsAsDarkValid: clueQualityMetrics.allUnknownsAsDarkValid,
+        requireAllLightInvalid: clueQualityMetrics.requireAllLightInvalid,
+        requireAllDarkInvalid: clueQualityMetrics.requireAllDarkInvalid,
+      },
     },
   };
 }

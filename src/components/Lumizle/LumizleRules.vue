@@ -91,12 +91,13 @@ const resolvedRules = computed(() =>
 
 <style scoped>
 .lumizle-rules {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 10px;
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 1rem 1.2rem;
   min-width: 180px;
   max-width: 240px;
+  box-shadow: var(--shadow-sm);
 }
 
 .rules-title {
@@ -104,7 +105,7 @@ const resolvedRules = computed(() =>
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #a0a0c0;
+  color: var(--color-text-soft);
   margin: 0 0 0.9rem;
 }
 
@@ -131,10 +132,10 @@ const resolvedRules = computed(() =>
   gap: 1px;
   width: 42px;
   height: 42px;
-  border: 1.5px solid rgba(180,180,200,0.35);
-  border-radius: 3px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: rgba(100,100,120,0.25);
+  background: var(--color-bg-muted);
 }
 
 .preview-cell {
@@ -142,8 +143,8 @@ const resolvedRules = computed(() =>
   height: 100%;
 }
 
-.preview-cell--dark  { background: #1c1c2e; }
-.preview-cell--light { background: #f0f0f8; }
+.preview-cell--dark  { background: #2c2c3a; }
+.preview-cell--light { background: #fff; }
 
 /* Texte */
 .rule-text {
@@ -159,7 +160,7 @@ const resolvedRules = computed(() =>
 
 .rule-description {
   font-size: 0.78rem;
-  color: #d0d0e8;
+  color: var(--color-text);
   line-height: 1.3;
 }
 
@@ -167,7 +168,7 @@ const resolvedRules = computed(() =>
 .rules-legend {
   margin-top: 1.2rem;
   padding-top: 0.9rem;
-  border-top: 1px solid rgba(255,255,255,0.09);
+  border-top: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
@@ -178,19 +179,19 @@ const resolvedRules = computed(() =>
   align-items: center;
   gap: 0.5rem;
   font-size: 0.72rem;
-  color: #9090b0;
+  color: var(--color-text-soft);
 }
 
 .legend-swatch {
   width: 14px;
   height: 14px;
   border-radius: 2px;
-  border: 1px solid rgba(180,180,200,0.3);
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
-.legend-swatch--dark    { background: #1c1c2e; }
-.legend-swatch--light   { background: #f0f0f8; }
+.legend-swatch--dark    { background: #2c2c3a; }
+.legend-swatch--light   { background: #fff; }
 .legend-swatch--unknown { background: #c5c5d0; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */

@@ -7,6 +7,7 @@
     :aria-label="ariaLabel"
     role="button"
     :tabindex="isFixed ? -1 : 0"
+    @click="$emit('click')"
     @keydown.enter.prevent="$emit('click')"
     @keydown.space.prevent="$emit('click')"
   >
@@ -164,7 +165,7 @@ const ariaLabel = computed(() => {
 }
 
 .lumizle-cell:not(.cell--fixed):focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: -2px;
   z-index: 2;
 }

@@ -14,7 +14,8 @@ const routes = [
   },
   {
     path: '/lumizle',
-    redirect: '/',
+    name: 'lumizle',
+    component: () => import('../views/LumizleView.vue'),
   },
   {
     path: '/profil',

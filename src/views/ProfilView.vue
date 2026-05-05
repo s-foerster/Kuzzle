@@ -656,19 +656,35 @@ function computeImportCandidates() {
   );
   const candidates = [];
   try {
+    const heartsStats = JSON.parse(
+      localStorage.getItem("hearts-level-stats") || "{}",
+    );
+    const lumizleStats = JSON.parse(
+      localStorage.getItem("lumizle-level-stats") || "{}",
+    );
     const hearts = JSON.parse(
       localStorage.getItem("hearts-completed-levels") || "[]",
     );
     for (const d of hearts) {
       if (DAILY_RE.test(d) && !existing.has(`hearts:${d}`))
-        candidates.push({ game_type: "hearts", puzzle_date: d });
+        candidates.push({
+          game_type: "hearts",
+          puzzle_date: d,
+          time_seconds: heartsStats[d]?.elapsedTime ?? null,
+          verify_count: heartsStats[d]?.verifyCount ?? null,
+        });
     }
     const lumizle = JSON.parse(
       localStorage.getItem("lumizle-completed-levels") || "[]",
     );
     for (const d of lumizle) {
       if (DAILY_RE.test(d) && !existing.has(`lumizle:${d}`))
-        candidates.push({ game_type: "lumizle", puzzle_date: d });
+        candidates.push({
+          game_type: "lumizle",
+          puzzle_date: d,
+          time_seconds: lumizleStats[d]?.elapsedSeconds ?? null,
+          verify_count: 0,
+        });
     }
   } catch (_) {
     /* localStorage peut être inaccessible */
@@ -686,7 +702,8 @@ async function importLocalHistory() {
       game_type: c.game_type,
       puzzle_date: c.puzzle_date,
       completed: true,
-      // time_seconds et verify_count absents du localStorage → NULL en DB
+      time_seconds: c.time_seconds,
+      verify_count: c.verify_count,
     }));
     // Insérer par lots de 50 pour éviter les requêtes trop grandes
     const BATCH = 50;

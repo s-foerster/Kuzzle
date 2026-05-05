@@ -49,6 +49,7 @@ for (const cfg of CONFIGS) {
             size: cfg.size, rules: cfg.rules,
             minLightRatio: cfg.minLightRatio, maxLightRatio: cfg.maxLightRatio,
             clueRatio: cfg.clueRatio,
+            clueQuality: { minFixedDarkClues: 2 },
         });
         console.log(`✅ ${Date.now() - t0}ms - ${puzzle.metadata.clueCount}/${puzzle.metadata.totalCells}`);
         out[cfg.id] = { id: cfg.id, difficulty: cfg.difficulty, puzzle };

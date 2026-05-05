@@ -17,7 +17,7 @@
     <!-- Jeu -->
     <div v-else-if="lumizlePuzzle" class="game-container">
       <!-- Timer -->
-      <div class="timer-row">
+      <div v-if="!lumizleIsWon" class="date-timer-row">
         <div
           class="timer-display"
           :class="{
@@ -28,6 +28,14 @@
           <span class="timer-icon">⏱</span>
           <span class="timer-value">{{ lumizleFormattedTime }}</span>
         </div>
+        <span
+          v-if="lumizleTierBadge"
+          class="tier-badge"
+          :class="`tier-badge--${lumizleTierBadge.key}`"
+          :title="lumizleTierBadge.title"
+        >
+          {{ lumizleTierBadge.label }}
+        </span>
         <button
           v-if="lumizleIsTimerStarted && !lumizleIsWon"
           @click="lumizleTogglePause"
@@ -45,7 +53,7 @@
             <div class="victory-icon">❤️</div>
             <div class="victory-text">
               <h2>Brillant !</h2>
-              <p>Puzzle Lumizle résolu.</p>
+              <p>{{ lumizleFormattedDate }}</p>
             </div>
           </div>
           <div class="victory-footer">
@@ -55,6 +63,16 @@
                 <span class="stat-value">{{ lumizleFormattedTime }}</span>
               </div>
             </div>
+          </div>
+          <div class="victory-leaderboard">
+            <PremiumGate :blur="true" label="le classement">
+              <LeaderboardPanel
+                v-if="lumizleCurrentLevelId"
+                :puzzle-date="lumizleCurrentLevelId"
+                :refresh-trigger="leaderboardRefreshTrigger"
+                game-type="lumizle"
+              />
+            </PremiumGate>
           </div>
         </div>
       </Transition>
@@ -207,6 +225,14 @@
         <button @click="lumizleResetGameState" class="btn btn-secondary">
           🔄
         </button>
+        <button
+          @click="lumizleToggleStrictMode"
+          class="btn btn-secondary btn-strict"
+          :class="{ 'btn-strict--active': lumizleStrictMode }"
+          :title="lumizleStrictMode ? 'Mode strict : aucun feedback sur les violations' : 'Mode normal : les violations sont affichées en rouge'"
+        >
+          {{ lumizleStrictMode ? '🔒 Strict' : '🔓 Aide' }}
+        </button>
       </div>
     </div>
   </main>
@@ -216,38 +242,59 @@
 import { ref, watch, onMounted, computed, nextTick } from "vue";
 import LumizleGrid from "../components/Lumizle/LumizleGrid.vue";
 import LumizleRules from "../components/Lumizle/LumizleRules.vue";
+import LeaderboardPanel from "../components/LeaderboardPanel.vue";
+import PremiumGate from "../components/PremiumGate.vue";
 import { useLumizle } from "../composables/useLumizle.js";
+import { useLeaderboard } from "../composables/useLeaderboard.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
 import lumizleCacheData from "../../lumizle-cache.json";
 
 const navStore = useNavigationStore();
 const authStore = useAuthStore();
+const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
+const leaderboardRefreshTrigger = ref(0);
 
 const {
   puzzle: lumizlePuzzle,
   gameState: lumizleGameState,
   isWon: lumizleIsWon,
+  isWonByUserInSession: lumizleIsWonByUserInSession,
   isLoading: lumizleIsLoading,
   error: lumizleError,
   formattedTime: lumizleFormattedTime,
   isTimerStarted: lumizleIsTimerStarted,
   isPaused: lumizleIsPaused,
   togglePause: lumizleTogglePause,
+  freezeTimer: lumizleFreezeTimer,
   undoHistory: lumizleUndoHistory,
   undo: lumizleUndo,
   fixedCells: lumizleFixedCells,
   violatingCells: lumizleViolatingCells,
+  strictMode: lumizleStrictMode,
+  toggleStrictMode: lumizleToggleStrictMode,
   handleCellClick: lumizleHandleCellClick,
   handleCellDrag: lumizleHandleCellDrag,
   resetGameState: lumizleResetGameState,
+  fillWithSolution: lumizleFillWithSolution,
   initPuzzle: lumizleInitPuzzle,
   initPracticePuzzle: lumizleInitPracticePuzzle,
   markCompleted: lumizleMarkCompleted,
+  saveGameState: lumizleSaveGameState,
+  getLevelStats: lumizleGetLevelStats,
+  saveLevelStats: lumizleSaveLevelStats,
   currentDate: lumizleCurrentDate,
   elapsedSeconds: lumizleElapsedSeconds,
   isPractice: lumizleIsPractice,
 } = useLumizle();
+
+function freezeLumizleTimerIfActive(shouldFreeze) {
+  if (!lumizleIsTimerStarted.value || lumizleIsWon.value) return;
+  lumizleFreezeTimer(shouldFreeze);
+  if (shouldFreeze) lumizleSaveGameState();
+}
+
+watch(() => authStore.authModalOpen, freezeLumizleTimerIfActive);
 
 function getDateKey(d) {
   const yyyy = d.getFullYear();
@@ -259,6 +306,41 @@ function getDateKey(d) {
 const todayKey = getDateKey(new Date());
 const currentArchiveDate = ref(todayKey);
 
+const lumizleCurrentLevelId = computed(() => lumizleCurrentDate.value || null);
+
+const lumizleFormattedDate = computed(() => {
+  const id = lumizleCurrentLevelId.value;
+  if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(id)) return "Puzzle Lumizle résolu.";
+  const [year, month, day] = id.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+});
+
+function hasLumizleClueQuality(entry) {
+  const quality = entry?.puzzle?.metadata?.clueQuality;
+  if (!quality) return false;
+  return !quality.requireAllLightInvalid || quality.allUnknownsAsLightValid === false;
+}
+
+// Badge difficulté / tier (nouveau pipeline logique uniquement)
+const lumizleTierBadge = computed(() => {
+  const meta = lumizlePuzzle.value?.metadata;
+  if (!meta) return null;
+  // Ancien format : pas de tier → pas de badge
+  if (!meta.tier || !meta.tierLabel) return null;
+  const techs = meta.difficulty?.techniques?.length ?? 0;
+  const maxLevel = meta.difficulty?.maxLevel ?? 0;
+  return {
+    key: meta.tier,           // 'facile' | 'moyen' | 'difficile' | 'expert'
+    label: meta.tierLabel,
+    title: `Niveau de technique : L${maxLevel} · ${techs} technique${techs > 1 ? 's' : ''}`,
+  };
+});
+
 // Afficher le calendrier si le puzzle actuel est un puzzle quotidien (format YYYY-MM-DD)
 // On cache le calendrier uniquement pour les vrais puzzles "practice" (easy/medium/hard custom)
 const showDailyCalendar = computed(() => {
@@ -269,8 +351,8 @@ const showDailyCalendar = computed(() => {
 function initDailyPuzzle() {
   currentArchiveDate.value = todayKey;
   const entry = lumizleCacheData[todayKey];
-  if (entry) {
-    lumizleInitPracticePuzzle(entry.puzzle, todayKey);
+  if (entry && hasLumizleClueQuality(entry)) {
+    lumizleInitPracticePuzzle(entry.puzzle, todayKey, false);
   } else {
     lumizleInitPuzzle(todayKey);
   }
@@ -305,7 +387,9 @@ const isCalPickerOpen = ref(false);
 const pickerMonthOffset = ref(0); // 0 = mois courant, -1 = mois précédent…
 
 // Toutes les dates disponibles dans le cache
-const availableDateKeys = new Set(Object.keys(lumizleCacheData));
+const availableDateKeys = new Set(
+  Object.keys(lumizleCacheData).filter(dateKey => hasLumizleClueQuality(lumizleCacheData[dateKey])),
+);
 
 // Date de référence pour le picker (1er du mois affiché)
 const pickerBaseDate = computed(() => {
@@ -419,8 +503,8 @@ function loadArchiveDay(day) {
   if (day.isToday) {
     // Aujourd'hui : tenter le cache d'abord, puis l'API
     const entry = lumizleCacheData[day.dateKey];
-    if (entry) {
-      lumizleInitPracticePuzzle(entry.puzzle, day.dateKey);
+    if (entry && hasLumizleClueQuality(entry)) {
+      lumizleInitPracticePuzzle(entry.puzzle, day.dateKey, false);
     } else {
       lumizleInitPuzzle(day.dateKey);
     }
@@ -428,17 +512,89 @@ function loadArchiveDay(day) {
   }
   // Archive : charger depuis le cache JSON
   const entry = lumizleCacheData[day.dateKey];
-  if (!entry) {
+  if (!entry || !hasLumizleClueQuality(entry)) {
     lumizleError.value = `Puzzle non disponible pour le ${day.dateKey}.`;
     return;
   }
-  lumizleInitPracticePuzzle(entry.puzzle, day.dateKey);
+  lumizleInitPracticePuzzle(entry.puzzle, day.dateKey, false);
 }
 
 // Niveaux complétés Lumizle
+const LS_KEY = "lumizle-completed-levels";
 const lumizleCompletedLevels = ref(
-  JSON.parse(localStorage.getItem("lumizle-completed-levels") || "[]"),
+  JSON.parse(localStorage.getItem(LS_KEY) || "[]"),
 );
+
+async function syncCompletedFromSupabase() {
+  if (!authStore.isLoggedIn) return;
+  try {
+    const { supabase } = await import("../lib/supabase.js");
+    if (!supabase) return;
+
+    const { data, error: fetchError } = await supabase
+      .from("game_results")
+      .select("puzzle_date, time_seconds")
+      .eq("user_id", authStore.user.id)
+      .eq("game_type", "lumizle")
+      .eq("completed", true);
+
+    if (fetchError) {
+      console.error("❌ [LumizleView] Erreur sync niveaux:", fetchError.message);
+      return;
+    }
+
+    const remoteIds = (data || []).map((r) => r.puzzle_date);
+    const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+    const merged = [...new Set([...local, ...remoteIds])];
+
+    for (const row of data || []) {
+      if (row.time_seconds != null) {
+        lumizleSaveLevelStats(row.puzzle_date, row.time_seconds);
+      }
+    }
+
+    lumizleCompletedLevels.value = merged;
+    localStorage.setItem(LS_KEY, JSON.stringify(merged));
+    if (!lumizleIsTimerStarted.value) {
+      checkAndFillIfCompleted();
+    }
+  } catch (e) {
+    console.error("❌ [LumizleView] Exception sync niveaux:", e);
+  }
+}
+
+async function checkAndFillIfCompleted() {
+  await nextTick();
+  const id = lumizleCurrentLevelId.value;
+  if (!id || !lumizleCompletedLevels.value.includes(id) || lumizleIsWon.value) return;
+
+  lumizleFillWithSolution();
+
+  if (!lumizleGetLevelStats(id) && authStore.isLoggedIn && /^\d{4}-\d{2}-\d{2}$/.test(id)) {
+    try {
+      const { supabase } = await import("../lib/supabase.js");
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("game_results")
+        .select("time_seconds")
+        .eq("user_id", authStore.user.id)
+        .eq("game_type", "lumizle")
+        .eq("puzzle_date", id)
+        .single();
+      if (data?.time_seconds != null) {
+        lumizleElapsedSeconds.value = data.time_seconds;
+        lumizleSaveLevelStats(id, data.time_seconds);
+        lumizleSaveGameState();
+      }
+    } catch (_) {
+      // Fallback silencieux : le niveau reste affiché comme complété.
+    }
+  }
+}
+
+watch([lumizlePuzzle, lumizleCurrentDate], ([p]) => {
+  if (p) checkAndFillIfCompleted();
+});
 
 watch(lumizleIsWon, async (won) => {
   if (!won || !lumizleCurrentDate.value) return;
@@ -446,15 +602,16 @@ watch(lumizleIsWon, async (won) => {
   lumizleMarkCompleted(id);
   if (!lumizleCompletedLevels.value.includes(id)) {
     lumizleCompletedLevels.value.push(id);
-    localStorage.setItem(
-      "lumizle-completed-levels",
-      JSON.stringify(lumizleCompletedLevels.value),
-    );
+    localStorage.setItem(LS_KEY, JSON.stringify(lumizleCompletedLevels.value));
+  }
+
+  if (lumizleIsWonByUserInSession.value) {
+    lumizleSaveLevelStats(id, lumizleElapsedSeconds.value);
   }
 
   // Supabase : sauvegarde pour tous les puzzles avec une date YYYY-MM-DD
   const isDateKey = /^\d{4}-\d{2}-\d{2}$/.test(id);
-  if (authStore.isLoggedIn && isDateKey) {
+  if (authStore.isLoggedIn && isDateKey && lumizleIsWonByUserInSession.value) {
     try {
       const { supabase } = await import("../lib/supabase.js");
       if (supabase) {
@@ -465,6 +622,7 @@ watch(lumizleIsWon, async (won) => {
             puzzle_date: id,
             completed: true,
             time_seconds: lumizleElapsedSeconds.value,
+            verify_count: 0,
           },
           { onConflict: "user_id,game_type,puzzle_date" },
         );
@@ -475,6 +633,8 @@ watch(lumizleIsWon, async (won) => {
           );
         } else {
           console.log("✅ [LumizleView] Résultat sauvegardé dans Supabase");
+          invalidateLeaderboardCache(id, "lumizle");
+          leaderboardRefreshTrigger.value++;
         }
       }
     } catch (e) {
@@ -483,6 +643,15 @@ watch(lumizleIsWon, async (won) => {
   }
 });
 
+watch(
+  () => authStore.user?.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      syncCompletedFromSupabase();
+    }
+  },
+);
+
 onMounted(() => {
   const pending = navStore.consumePendingPuzzle();
   if (pending?.type === "lumizle-practice") {
@@ -490,6 +659,8 @@ onMounted(() => {
   } else {
     initDailyPuzzle();
   }
+
+  syncCompletedFromSupabase();
 });
 </script>
 
@@ -528,18 +699,21 @@ onMounted(() => {
 
 .game-container {
   width: 100%;
-  max-width: 520px;
+  max-width: 860px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.timer-row {
+.date-timer-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: 0.6rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .timer-display {
   display: flex;
@@ -603,8 +777,57 @@ onMounted(() => {
   color: white;
 }
 
+/* ── Tier badge ────────────────────────────────────────────────────────── */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  user-select: none;
+  cursor: help;
+}
+.tier-badge--facile {
+  background: rgba(52, 199, 89, 0.14);
+  color: #2a9c4a;
+  border-color: rgba(52, 199, 89, 0.35);
+}
+.tier-badge--moyen {
+  background: rgba(0, 122, 255, 0.14);
+  color: #0b63c4;
+  border-color: rgba(0, 122, 255, 0.35);
+}
+.tier-badge--difficile {
+  background: rgba(255, 149, 0, 0.14);
+  color: #c86a00;
+  border-color: rgba(255, 149, 0, 0.35);
+}
+.tier-badge--expert {
+  background: rgba(255, 59, 48, 0.14);
+  color: #c02a21;
+  border-color: rgba(255, 59, 48, 0.35);
+}
+
+/* ── Toggle strict ─────────────────────────────────────────────────────── */
+.btn-strict {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 5.5rem;
+}
+.btn-strict--active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
 .victory-card {
   width: 100%;
+  max-width: 520px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-primary-light);
   color: var(--color-text);
@@ -690,6 +913,9 @@ onMounted(() => {
   font-weight: 800;
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
+}
+.victory-leaderboard {
+  width: 100%;
 }
 
 .victory-slide-enter-active {
@@ -780,6 +1006,7 @@ onMounted(() => {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   width: 100%;
+  max-width: 520px;
   justify-content: center;
 }
 .archive-strip {
@@ -1001,6 +1228,7 @@ onMounted(() => {
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  justify-content: center;
   max-width: 820px;
   transition: filter 0.3s ease;
 }
@@ -1020,6 +1248,7 @@ onMounted(() => {
   flex-wrap: wrap;
   margin-top: 0.75rem;
   width: 100%;
+  max-width: 520px;
 }
 .btn {
   padding: 0.7rem 1.4rem;
@@ -1067,6 +1296,16 @@ onMounted(() => {
 @media (max-width: 600px) {
   .app-main {
     padding: 1rem 0.75rem 1.5rem;
+  }
+  .game-container,
+  .date-timer-row,
+  .archive-strip-row,
+  .actions {
+    max-width: 100%;
+  }
+  .timer-display {
+    font-size: 1.2rem;
+    padding: 0.4rem 0.9rem;
   }
   .actions {
     gap: 0.5rem;
