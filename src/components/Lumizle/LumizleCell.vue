@@ -17,45 +17,44 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed } from "vue";
 
 const props = defineProps({
   /** Valeur effective : 0=inconnu, 1=sombre, 2=clair */
-  value:      { type: Number, required: true },
+  value: { type: Number, required: true },
   /** La cellule est-elle un indice fixe ? */
-  isFixed:    { type: Boolean, default: false },
+  isFixed: { type: Boolean, default: false },
   /** La cellule est-elle en violation de règle ? */
-  isViolating:{ type: Boolean, default: false },
+  isViolating: { type: Boolean, default: false },
   /** La partie est-elle gagnée ? */
-  isWon:      { type: Boolean, default: false },
-  row:        { type: Number, required: true },
-  col:        { type: Number, required: true },
+  isWon: { type: Boolean, default: false },
+  row: { type: Number, required: true },
+  col: { type: Number, required: true },
 });
 
-defineEmits(['click']);
+defineEmits(["click"]);
 
 const cellClasses = computed(() => ({
   // État de la cellule
-  'cell--unknown': props.value === 0,
-  'cell--dark':    props.value === 1,
-  'cell--light':   props.value === 2,
+  "cell--unknown": props.value === 0,
+  "cell--dark": props.value === 1,
+  "cell--light": props.value === 2,
 
   // Origine
-  'cell--fixed':  props.isFixed,
-  'cell--player': !props.isFixed && props.value !== 0,
+  "cell--fixed": props.isFixed,
+  "cell--player": !props.isFixed && props.value !== 0,
 
   // Violation : contour rouge
-  'cell--violating': props.isViolating && !props.isWon,
+  "cell--violating": props.isViolating && !props.isWon,
 
   // Victoire
-  'cell--won': props.isWon,
+  "cell--won": props.isWon,
 }));
 
 const ariaLabel = computed(() => {
-  const stateLabel = props.value === 0 ? 'vide'
-    : props.value === 1 ? 'sombre'
-    : 'clair';
-  const fixedLabel = props.isFixed ? ' (indice fixe)' : '';
+  const stateLabel =
+    props.value === 0 ? "vide" : props.value === 1 ? "sombre" : "clair";
+  const fixedLabel = props.isFixed ? " (indice fixe)" : "";
   return `Cellule ligne ${props.row + 1}, colonne ${props.col + 1} : ${stateLabel}${fixedLabel}`;
 });
 </script>
@@ -67,7 +66,9 @@ const ariaLabel = computed(() => {
   height: 100%;
   cursor: pointer;
   box-sizing: border-box;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 
@@ -78,7 +79,7 @@ const ariaLabel = computed(() => {
 
 /* ── États de valeur ─────────────────────────────────────────────────────── */
 .cell--unknown {
-  background-color: #c5c5d0;
+  background-color: #b1b5c4;
 }
 
 /* Cellule sombre posée par le joueur */
@@ -88,7 +89,7 @@ const ariaLabel = computed(() => {
 
 /* Cellule claire posée par le joueur */
 .cell--light.cell--player {
-  background-color: #f0f0f8;
+  background-color: #ffffff;
 }
 
 /* Cellule sombre fixe (indice) : légèrement plus contrastée */
@@ -113,7 +114,7 @@ const ariaLabel = computed(() => {
 /* Coins dorés en pseudo-éléments pour distinguer les indices visuellement */
 .cell--fixed .fixed-marker::before,
 .cell--fixed .fixed-marker::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 5px;
   height: 5px;
@@ -145,19 +146,34 @@ const ariaLabel = computed(() => {
 
 /* ── Violation : contour rouge ──────────────────────────────────────────── */
 .cell--violating {
-  box-shadow: inset 0 0 0 2.5px #ef4444, 0 0 6px rgba(239, 68, 68, 0.45);
+  box-shadow:
+    inset 0 0 0 2.5px #ef4444,
+    0 0 6px rgba(239, 68, 68, 0.45);
   animation: violation-pulse 1.4s ease-in-out infinite;
   z-index: 1;
 }
 
 @keyframes violation-pulse {
-  0%,  100% { box-shadow: inset 0 0 0 2.5px #ef4444, 0 0 6px rgba(239, 68, 68, 0.35); }
-  50%        { box-shadow: inset 0 0 0 2.5px #f87171, 0 0 12px rgba(239, 68, 68, 0.60); }
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 2.5px #ef4444,
+      0 0 6px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 2.5px #f87171,
+      0 0 12px rgba(239, 68, 68, 0.6);
+  }
 }
 
 /* ── Victoire ────────────────────────────────────────────────────────────── */
-.cell--won.cell--dark  { background-color: #1a1a2e; }
-.cell--won.cell--light { background-color: #f8f8ff; }
+.cell--won.cell--dark {
+  background-color: #1a1a2e;
+}
+.cell--won.cell--light {
+  background-color: #ffffff;
+}
 
 /* ── Hover / focus ───────────────────────────────────────────────────────── */
 .lumizle-cell:not(.cell--fixed):hover {
