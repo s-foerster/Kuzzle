@@ -31,6 +31,14 @@ export function useLumizle() {
   const isPractice = ref(false);
   const isWonByUserInSession = ref(false);
 
+  // ── Couleur du premier clic ───────────────────────────────────────────────
+  // CELL_LIGHT (blanc) par défaut ; peut être basculé à tout moment.
+  const firstClickColor = ref(CELL_LIGHT);
+
+  function toggleFirstClickColor() {
+    firstClickColor.value = firstClickColor.value === CELL_LIGHT ? CELL_DARK : CELL_LIGHT;
+  }
+
   // ── Mode strict (cache les violations en temps réel) ──────────────────────
   // Par défaut : aide activée (strictMode = false). On ne restaure depuis
   // localStorage que si l'utilisateur avait explicitement activé le mode strict.
@@ -195,11 +203,15 @@ export function useLumizle() {
   // ── Interactions cellule ──────────────────────────────────────────────────
 
   /**
-   * Retourne la prochaine valeur dans le cycle : vide → blanc → noir → vide.
+   * Retourne la prochaine valeur dans le cycle.
+   * Si la cellule est vide, applique firstClickColor.
+   * Sinon : couleur choisie → autre couleur → vide.
    */
   function nextCellValue(current) {
-    if (current === CELL_UNKNOWN) return CELL_LIGHT;
-    if (current === CELL_LIGHT) return CELL_DARK;
+    const first = firstClickColor.value;
+    const second = first === CELL_LIGHT ? CELL_DARK : CELL_LIGHT;
+    if (current === CELL_UNKNOWN) return first;
+    if (current === first) return second;
     return CELL_UNKNOWN;
   }
 
@@ -302,6 +314,7 @@ export function useLumizle() {
     gameState.value = makeEmptyGameState(size);
     undoHistory.value = [];
     isWonByUserInSession.value = false;
+    firstClickColor.value = CELL_LIGHT;
     resetTimer();
     saveGameState();
   }
@@ -314,6 +327,7 @@ export function useLumizle() {
     isPractice.value = practice;
     isWonByUserInSession.value = false;
     undoHistory.value = [];
+    firstClickColor.value = CELL_LIGHT;
 
     const size = puzzleData.metadata.gridSize;
     gameState.value = makeEmptyGameState(size);
@@ -441,6 +455,10 @@ export function useLumizle() {
     // Mode strict
     strictMode,
     toggleStrictMode,
+
+    // Couleur du premier clic
+    firstClickColor,
+    toggleFirstClickColor,
 
     // Win
     isWon,

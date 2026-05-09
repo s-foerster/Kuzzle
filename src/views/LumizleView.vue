@@ -214,6 +214,7 @@
             :violating-cells="lumizleViolatingCells"
             :grid-size="lumizlePuzzle.metadata.gridSize"
             :is-won="lumizleIsWon"
+            :first-click-color="lumizleFirstClickColor"
             @cell-click="lumizleHandleCellClick"
             @cell-drag="lumizleHandleCellDrag"
           />
@@ -244,6 +245,14 @@
         >
           {{ lumizleStrictMode ? '🔒 Strict' : '🔓 Aide' }}
         </button>
+        <button
+          @click="lumizleToggleFirstClickColor"
+          class="btn btn-secondary btn-first-click"
+          :title="lumizleFirstClickColor === CELL_LIGHT ? 'Premier clic : case blanche (cliquer pour basculer en noir)' : 'Premier clic : case noire (cliquer pour basculer en blanc)'"
+        >
+          <span class="first-click-preview" :class="lumizleFirstClickColor === CELL_LIGHT ? 'first-click-preview--light' : 'first-click-preview--dark'"></span>
+          1er clic
+        </button>
       </div>
     </div>
   </main>
@@ -257,6 +266,7 @@ import LumizleRulesModal from "../components/Lumizle/LumizleRulesModal.vue";
 import LeaderboardPanel from "../components/LeaderboardPanel.vue";
 import PremiumGate from "../components/PremiumGate.vue";
 import { useLumizle } from "../composables/useLumizle.js";
+import { CELL_LIGHT } from "../algorithms/lumizle/rules.js";
 import { useLeaderboard } from "../composables/useLeaderboard.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -295,6 +305,8 @@ const {
   violatingCells: lumizleViolatingCells,
   strictMode: lumizleStrictMode,
   toggleStrictMode: lumizleToggleStrictMode,
+  firstClickColor: lumizleFirstClickColor,
+  toggleFirstClickColor: lumizleToggleFirstClickColor,
   handleCellClick: lumizleHandleCellClick,
   handleCellDrag: lumizleHandleCellDrag,
   resetGameState: lumizleResetGameState,
@@ -851,6 +863,29 @@ onMounted(() => {
   background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
+}
+
+.btn-first-click {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.first-click-preview {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid var(--color-border, #ccc);
+  flex-shrink: 0;
+}
+.first-click-preview--light {
+  background: #ffffff;
+}
+.first-click-preview--dark {
+  background: #2e2e3e;
+  border-color: #2e2e3e;
 }
 
 .victory-card {

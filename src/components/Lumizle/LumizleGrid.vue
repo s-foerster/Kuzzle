@@ -43,6 +43,7 @@ const props = defineProps({
   violatingCells: { type: Set, required: true },
   gridSize: { type: Number, default: 7 },
   isWon: { type: Boolean, default: false },
+  firstClickColor: { type: Number, default: CELL_LIGHT },
 });
 
 const emit = defineEmits(["cell-click", "cell-drag"]);
@@ -95,14 +96,13 @@ const startCell = ref(null);
 const dragTarget = ref(CELL_UNKNOWN);
 
 function computeDragTarget(r, c) {
-  // Même cycle que le clic : vide → blanc → noir → vide.
   const cur = effectiveValue(r, c);
   if (props.fixedCells.has(`${r},${c}`)) return cur; // fixe, pas de drag
-  return cur === CELL_UNKNOWN
-    ? CELL_LIGHT
-    : cur === CELL_LIGHT
-      ? CELL_DARK
-      : CELL_UNKNOWN;
+  const first = props.firstClickColor;
+  const second = first === CELL_LIGHT ? CELL_DARK : CELL_LIGHT;
+  if (cur === CELL_UNKNOWN) return first;
+  if (cur === first) return second;
+  return CELL_UNKNOWN;
 }
 
 function handleMouseDown() {
