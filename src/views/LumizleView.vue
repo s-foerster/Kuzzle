@@ -77,6 +77,14 @@
         </div>
       </Transition>
 
+      <!-- Modal de règles pré-jeu -->
+      <LumizleRulesModal
+        :is-open="showRulesModal && !lumizleIsWon"
+        :rules="lumizlePuzzle.rules"
+        :tier-badge="lumizleTierBadge"
+        @play="handlePlay"
+      />
+
       <!-- Pause -->
       <Transition name="modal-fade">
         <div
@@ -193,7 +201,10 @@
       <!-- Grille + Règles -->
       <div
         class="lumizle-play-area"
-        :class="{ 'grid-blurred': lumizleIsPaused }"
+        :class="{
+          'grid-blurred': lumizleIsPaused,
+          'grid-locked': showRulesModal && !lumizleIsWon,
+        }"
       >
         <div class="lumizle-grid-area">
           <LumizleGrid
@@ -242,6 +253,7 @@
 import { ref, watch, onMounted, computed, nextTick } from "vue";
 import LumizleGrid from "../components/Lumizle/LumizleGrid.vue";
 import LumizleRules from "../components/Lumizle/LumizleRules.vue";
+import LumizleRulesModal from "../components/Lumizle/LumizleRulesModal.vue";
 import LeaderboardPanel from "../components/LeaderboardPanel.vue";
 import PremiumGate from "../components/PremiumGate.vue";
 import { useLumizle } from "../composables/useLumizle.js";
@@ -255,6 +267,15 @@ const authStore = useAuthStore();
 const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
 const leaderboardRefreshTrigger = ref(0);
 
+// ── Modal de règles pré-jeu ───────────────────────────────────────────────────
+// Affiché à chaque chargement d'un nouveau puzzle, sauf si le niveau est déjà terminé.
+const showRulesModal = ref(false);
+
+function handlePlay() {
+  showRulesModal.value = false;
+  lumizleStartTimer();
+}
+
 const {
   puzzle: lumizlePuzzle,
   gameState: lumizleGameState,
@@ -265,6 +286,7 @@ const {
   formattedTime: lumizleFormattedTime,
   isTimerStarted: lumizleIsTimerStarted,
   isPaused: lumizleIsPaused,
+  startTimer: lumizleStartTimer,
   togglePause: lumizleTogglePause,
   freezeTimer: lumizleFreezeTimer,
   undoHistory: lumizleUndoHistory,
@@ -593,7 +615,13 @@ async function checkAndFillIfCompleted() {
 }
 
 watch([lumizlePuzzle, lumizleCurrentDate], ([p]) => {
-  if (p) checkAndFillIfCompleted();
+  if (p) {
+    checkAndFillIfCompleted();
+    // Afficher les règles uniquement si le puzzle n'est pas déjà complété
+    if (!lumizleIsWon.value) {
+      showRulesModal.value = true;
+    }
+  }
 });
 
 watch(lumizleIsWon, async (won) => {
@@ -947,6 +975,10 @@ onMounted(() => {
 
 .grid-blurred {
   filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+.grid-locked {
   pointer-events: none;
   user-select: none;
 }

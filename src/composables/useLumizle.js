@@ -32,9 +32,12 @@ export function useLumizle() {
   const isWonByUserInSession = ref(false);
 
   // ── Mode strict (cache les violations en temps réel) ──────────────────────
+  // Par défaut : aide activée (strictMode = false). On ne restaure depuis
+  // localStorage que si l'utilisateur avait explicitement activé le mode strict.
   const strictMode = ref(false);
   try {
-    strictMode.value = localStorage.getItem(LS_STRICT_MODE_KEY) === '1';
+    const saved = localStorage.getItem(LS_STRICT_MODE_KEY);
+    if (saved === '1') strictMode.value = true;
   } catch (_) { /* ignore */ }
 
   function toggleStrictMode() {
@@ -447,6 +450,7 @@ export function useLumizle() {
     formattedTime,
     isTimerStarted,
     isPaused,
+    startTimer,
     togglePause,
     freezeTimer,
     resetTimer,
