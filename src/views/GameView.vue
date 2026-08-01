@@ -58,6 +58,7 @@
           <ResultSyncStatus
             v-if="authStore.isLoggedIn"
             :status="currentResultSyncStatus"
+            :message="currentResultSyncMessage"
             @retry="retryCurrentResultSync"
           />
           <!-- Classement intégré dans la carte victoire -->
@@ -803,6 +804,13 @@ const currentResultSyncStatus = computed(() => {
   if (!currentLevelId.value) return "idle";
   return (
     gameResultStatuses.value[`hearts:${currentLevelId.value}`]?.status ?? "idle"
+  );
+});
+
+const currentResultSyncMessage = computed(() => {
+  if (!currentLevelId.value) return "";
+  return (
+    gameResultStatuses.value[`hearts:${currentLevelId.value}`]?.message ?? ""
   );
 });
 

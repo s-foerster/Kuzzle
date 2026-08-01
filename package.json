@@ -9,6 +9,7 @@
     "server": "node --env-file=.env server.js",
     "server:dev": "node --env-file=.env --watch server.js",
     "test:results": "node --test test-game-results.mjs",
+    "test:leaderboard": "node --test test-leaderboard-resilience.mjs",
     "full": "concurrently \"npm run dev\" \"npm run server:dev\"",
     "deploy": "cross-env DEPLOY_TARGET=github npm run build && gh-pages -d dist",
     "build:koyeb": "npm run build",

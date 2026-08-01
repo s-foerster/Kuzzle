@@ -22,6 +22,29 @@ export const gameResultStatuses = ref({});
 
 const activeSyncs = new Map();
 
+function getSyncErrorMessage(error) {
+  const code = error?.code || "";
+  const message = error?.message || "";
+
+  if (code === "42702" || message.toLowerCase().includes("ambiguous")) {
+    return "Le service de classement doit être mis à jour. Votre score est conservé.";
+  }
+  if (
+    code === "42501" ||
+    code === "PGRST301" ||
+    message.toLowerCase().includes("jwt")
+  ) {
+    return "Votre session a expiré. Reconnectez-vous pour synchroniser ce score.";
+  }
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.onLine === false
+  ) {
+    return "Vous êtes hors connexion. Votre score sera synchronisé plus tard.";
+  }
+  return "Synchronisation impossible pour le moment. Votre score est conservé.";
+}
+
 function setStatuses(results, status, message = null) {
   if (!results.length) return;
   const next = { ...gameResultStatuses.value };
@@ -202,7 +225,8 @@ async function runSync(userId, storage) {
     const local = collectLocalGameResults(storage);
     gameResultsPendingCount.value = local.valid.length;
     gameResultsInvalidCount.value = local.invalid.length;
-    gameResultsSyncError.value = error?.message || "Synchronisation impossible";
+    gameResultsSyncError.value = getSyncErrorMessage(error);
+    console.error("[gameResults] Synchronisation impossible:", error);
     setStatuses(local.valid, "pending", gameResultsSyncError.value);
     return {
       success: false,

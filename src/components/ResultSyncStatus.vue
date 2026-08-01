@@ -26,6 +26,7 @@ import { computed } from "vue";
 
 const props = defineProps({
   status: { type: String, default: "idle" },
+  message: { type: String, default: "" },
 });
 
 defineEmits(["retry"]);
@@ -36,7 +37,7 @@ const visible = computed(() =>
 const label = computed(() => {
   if (props.status === "syncing") return "Enregistrement du score…";
   if (props.status === "pending") {
-    return "Score en attente de synchronisation";
+    return props.message || "Score en attente de synchronisation";
   }
   return "Score non classé : statistiques incomplètes";
 });

@@ -24,8 +24,11 @@
     </div>
 
     <!-- Erreur -->
-    <div v-else-if="error && error !== 'auth_required'" class="lb-error">
-      Impossible de charger le classement.
+    <div v-else-if="error" class="lb-error">
+      <span>{{ errorMessage }}</span>
+      <button class="lb-retry-btn" :disabled="loading" @click="retry">
+        Réessayer
+      </button>
     </div>
 
     <!-- Vide -->
@@ -152,7 +155,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from "vue";
+import { computed, onUnmounted, watch } from "vue";
 import { useLeaderboard } from "../composables/useLeaderboard.js";
 import { useAuthStore } from "../stores/auth.js";
 import { gameResultsSyncRevision } from "../services/gameResults.js";
@@ -174,6 +177,7 @@ const {
   currentUserRank,
   fetchLeaderboard,
   loadMore,
+  retry,
   invalidateCache,
   reset,
 } = useLeaderboard();
@@ -184,6 +188,12 @@ const displayedEntries = computed(() =>
 );
 
 const showVerifyMetric = computed(() => props.gameType === "hearts");
+
+const errorMessage = computed(() =>
+  error.value === "auth_required"
+    ? "Votre session n'est plus disponible."
+    : "Impossible de charger le classement.",
+);
 
 // true si le bouton "voir plus" a été utilisé → on affiche tout ce qu'on a déjà
 const hasMore = computed(() => entries.value.length < total.value);
@@ -204,12 +214,28 @@ function getVerifyCount(entry) {
   return entry?.verify_count ?? 0;
 }
 
+let reloadScheduled = false;
+let disposed = false;
+
+function scheduleReload({ invalidate = false } = {}) {
+  if (invalidate && props.puzzleDate) {
+    invalidateCache(props.puzzleDate, props.gameType);
+  }
+  if (reloadScheduled) return;
+  reloadScheduled = true;
+  Promise.resolve().then(() => {
+    reloadScheduled = false;
+    if (disposed || !props.puzzleDate || !authStore.isLoggedIn) return;
+    reset();
+    fetchLeaderboard(props.puzzleDate, props.gameType);
+  });
+}
+
 // Recharge automatiquement quand puzzleDate change
 watch(
   () => [props.puzzleDate, props.gameType],
   ([date, type]) => {
-    reset();
-    if (date && authStore.isLoggedIn) fetchLeaderboard(date, type);
+    if (date && authStore.isLoggedIn) scheduleReload();
   },
   { immediate: true },
 );
@@ -219,10 +245,10 @@ watch(
 watch(
   () => authStore.user?.id,
   (userId, previousUserId) => {
-    if (userId && userId !== previousUserId && props.puzzleDate) {
+    if (!userId) {
       reset();
-      invalidateCache(props.puzzleDate, props.gameType);
-      fetchLeaderboard(props.puzzleDate, props.gameType);
+    } else if (userId !== previousUserId && props.puzzleDate) {
+      scheduleReload({ invalidate: true });
     }
   },
 );
@@ -232,8 +258,7 @@ watch(
   () => props.refreshTrigger,
   (val) => {
     if (val > 0 && props.puzzleDate && authStore.isLoggedIn) {
-      reset();
-      fetchLeaderboard(props.puzzleDate, props.gameType);
+      scheduleReload();
     }
   },
 );
@@ -242,9 +267,13 @@ watch(
 // La révision globale garantit que le score et le rang courant sont rafraîchis.
 watch(gameResultsSyncRevision, () => {
   if (props.puzzleDate && authStore.isLoggedIn) {
-    reset();
-    fetchLeaderboard(props.puzzleDate, props.gameType);
+    scheduleReload();
   }
+});
+
+onUnmounted(() => {
+  disposed = true;
+  reset();
 });
 </script>
 
@@ -344,6 +373,35 @@ watch(gameResultsSyncRevision, () => {
   text-align: center;
   font-size: 0.85rem;
   color: var(--color-text-soft);
+}
+
+.lb-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.lb-retry-btn {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lb-retry-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.lb-retry-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* ── List / Rows ───────────────────────────────────────────────────────────── */

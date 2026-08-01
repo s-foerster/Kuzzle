@@ -67,6 +67,7 @@
           <ResultSyncStatus
             v-if="authStore.isLoggedIn"
             :status="currentResultSyncStatus"
+            :message="currentResultSyncMessage"
             @retry="retryCurrentResultSync"
           />
           <div class="victory-leaderboard">
@@ -356,6 +357,14 @@ const currentResultSyncStatus = computed(() => {
   return (
     gameResultStatuses.value[`lumizle:${lumizleCurrentLevelId.value}`]?.status ??
     "idle"
+  );
+});
+
+const currentResultSyncMessage = computed(() => {
+  if (!lumizleCurrentLevelId.value) return "";
+  return (
+    gameResultStatuses.value[`lumizle:${lumizleCurrentLevelId.value}`]?.message ??
+    ""
   );
 });
 

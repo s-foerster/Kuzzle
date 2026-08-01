@@ -1,25 +1,16 @@
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
+import {
+  isCurrentLeaderboardRequest,
+  runLeaderboardRequest,
+} from "../utils/leaderboardRequest.js";
 
-// Cache in-memory : évite les requêtes répétées si le composant est monté deux fois
-// (ex : LeaderboardPanel visible avant victoire ET dans la victory card)
-// Clé : `${puzzleDate}_${gameType}`, valeur : { entries, total, timestamp }
 const _cache = new Map();
-const CACHE_TTL_MS = 60_000; // 60 secondes
+const CACHE_TTL_MS = 60_000;
 
 export function invalidateLeaderboardCache(puzzleDate, gameType = "hearts") {
   _cache.delete(`${puzzleDate}_${gameType}`);
 }
 
-/**
- * Composable leaderboard pour un puzzle donné.
- *
- * Usage :
- *   const lb = useLeaderboard()
- *   await lb.fetchLeaderboard('2026-03-24', 'hearts')
- *
- * Une instance par composant suffit. Le cache évite les doubles requêtes
- * lorsque le même puzzleDate est affiché dans deux endroits (avant/après victoire).
- */
 export function useLeaderboard() {
   const entries = ref([]);
   const total = ref(0);
@@ -27,27 +18,27 @@ export function useLeaderboard() {
   const error = ref(null);
   const currentUserResult = ref(null);
 
-  // Clé du puzzle actuellement chargé (pour loadMore)
   let _currentDate = null;
   let _currentType = null;
+  let _requestGeneration = 0;
+  let _activeRequestController = null;
+  let _lastRequest = null;
 
-  // Top 3 entrées pour l'affichage initial condensé
   const topEntries = computed(() => entries.value.slice(0, 3));
-
-  // Entrée de l'utilisateur connecté (is_current_user = true)
   const currentUserEntry = computed(
     () =>
       currentUserResult.value ??
-      entries.value.find((e) => e.is_current_user) ??
+      entries.value.find((entry) => entry.is_current_user) ??
       null,
   );
-
-  // Rang de l'utilisateur connecté
   const currentUserRank = computed(
     () => currentUserEntry.value?.rank ?? null,
   );
 
   function reset() {
+    _requestGeneration += 1;
+    _activeRequestController?.abort();
+    _activeRequestController = null;
     entries.value = [];
     total.value = 0;
     error.value = null;
@@ -55,22 +46,43 @@ export function useLeaderboard() {
     currentUserResult.value = null;
     _currentDate = null;
     _currentType = null;
+    _lastRequest = null;
   }
 
-  async function fetchLeaderboard(puzzleDate, gameType = "hearts", limit = 10, offset = 0) {
+  async function fetchLeaderboard(
+    puzzleDate,
+    gameType = "hearts",
+    limit = 10,
+    offset = 0,
+    { bypassCache = false } = {},
+  ) {
     if (!puzzleDate) return;
+
+    const requestId = ++_requestGeneration;
+    _activeRequestController?.abort();
+    const requestController = new AbortController();
+    _activeRequestController = requestController;
+    _lastRequest = { puzzleDate, gameType, limit, offset };
 
     const cacheKey = `${puzzleDate}_${gameType}`;
     const cached = _cache.get(cacheKey);
     const now = Date.now();
 
-    // Utiliser le cache si encore frais ET offset = 0 (premier chargement)
-    if (offset === 0 && cached && now - cached.timestamp < CACHE_TTL_MS) {
-      entries.value = cached.entries;
+    if (
+      !bypassCache &&
+      offset === 0 &&
+      cached &&
+      now - cached.timestamp < CACHE_TTL_MS
+    ) {
+      entries.value = [...cached.entries];
       total.value = cached.total;
-      currentUserResult.value = cached.currentUserEntry ?? null;
+      currentUserResult.value = cached.currentUserEntry
+        ? { ...cached.currentUserEntry }
+        : null;
       _currentDate = puzzleDate;
       _currentType = gameType;
+      loading.value = false;
+      _activeRequestController = null;
       return;
     }
 
@@ -83,29 +95,45 @@ export function useLeaderboard() {
       const { supabase } = await import("../lib/supabase.js");
       if (!supabase) throw new Error("Supabase non disponible");
 
-      const leaderboardRequest = supabase.rpc("get_leaderboard", {
-          p_puzzle_date: puzzleDate,
-          p_game_type: gameType,
-          p_limit: limit,
-          p_offset: offset,
-        });
       const [leaderboardResponse, currentUserResponse] =
-        offset === 0
-          ? await Promise.all([
-              leaderboardRequest,
-              supabase.rpc("get_my_leaderboard_entry", {
+        await runLeaderboardRequest(
+          async (signal) => {
+            const leaderboardRequest = supabase
+              .rpc("get_leaderboard", {
                 p_puzzle_date: puzzleDate,
                 p_game_type: gameType,
-              }),
-            ])
-          : [await leaderboardRequest, null];
+                p_limit: limit,
+                p_offset: offset,
+              })
+              .abortSignal(signal);
+
+            if (offset !== 0) {
+              return [await leaderboardRequest, null];
+            }
+
+            return await Promise.all([
+              leaderboardRequest,
+              supabase
+                .rpc("get_my_leaderboard_entry", {
+                  p_puzzle_date: puzzleDate,
+                  p_game_type: gameType,
+                })
+                .abortSignal(signal),
+            ]);
+          },
+          { signal: requestController.signal },
+        );
+
+      if (!isCurrentLeaderboardRequest(requestId, _requestGeneration)) return;
 
       const { data, error: rpcError } = leaderboardResponse;
       const currentUserError = currentUserResponse?.error;
 
       if (rpcError) {
-        // Utilisateur non connecté : erreur de permission attendue
-        if (rpcError.code === "42501" || rpcError.message?.includes("permission")) {
+        if (
+          rpcError.code === "42501" ||
+          rpcError.message?.includes("permission")
+        ) {
           error.value = "auth_required";
         } else {
           error.value = rpcError.message;
@@ -113,9 +141,13 @@ export function useLeaderboard() {
         }
         return;
       }
+
       if (currentUserError) {
         error.value = currentUserError.message;
-        console.error("[useLeaderboard] Current-user RPC error:", currentUserError);
+        console.error(
+          "[useLeaderboard] Current-user RPC error:",
+          currentUserError,
+        );
         return;
       }
 
@@ -125,8 +157,7 @@ export function useLeaderboard() {
         entries.value = rows;
         currentUserResult.value = currentUserResponse?.data?.[0] ?? null;
       } else {
-        // Fusion sans doublons lors du loadMore
-        const existingRanks = new Set(entries.value.map((e) => e.rank));
+        const existingRanks = new Set(entries.value.map((entry) => entry.rank));
         for (const row of rows) {
           if (!existingRanks.has(row.rank)) entries.value.push(row);
         }
@@ -139,41 +170,57 @@ export function useLeaderboard() {
             ? Number(currentUserResult.value.total_count)
             : 0;
 
-      // Mettre en cache uniquement le premier chargement (offset = 0)
       if (offset === 0) {
         _cache.set(cacheKey, {
-          entries: entries.value,
+          entries: [...entries.value],
           total: total.value,
-          currentUserEntry: currentUserResult.value,
-          timestamp: now,
+          currentUserEntry: currentUserResult.value
+            ? { ...currentUserResult.value }
+            : null,
+          timestamp: Date.now(),
         });
       }
-    } catch (e) {
-      error.value = e.message ?? "Erreur inconnue";
-      console.error("[useLeaderboard] Exception:", e);
+    } catch (requestError) {
+      if (!isCurrentLeaderboardRequest(requestId, _requestGeneration)) return;
+      if (requestError?.code === "LEADERBOARD_CANCELLED") return;
+      error.value = requestError?.message ?? "Erreur inconnue";
+      console.error("[useLeaderboard] Exception:", requestError);
     } finally {
-      loading.value = false;
+      if (isCurrentLeaderboardRequest(requestId, _requestGeneration)) {
+        loading.value = false;
+        if (_activeRequestController === requestController) {
+          _activeRequestController = null;
+        }
+      }
     }
   }
 
-  /**
-   * Charge les entrées suivantes (au-delà des 10 premières).
-   * Les nouvelles entrées sont concaténées au tableau existant.
-   */
   async function loadMore() {
-    if (!_currentDate || loading.value) return;
+    if (
+      !_currentDate ||
+      loading.value ||
+      (total.value > 0 && entries.value.length >= total.value)
+    ) {
+      return;
+    }
+
     await fetchLeaderboard(
       _currentDate,
       _currentType ?? "hearts",
       10,
       entries.value.length,
+      { bypassCache: true },
     );
   }
 
-  /**
-   * Invalide le cache pour forcer un rechargement (appelé après victoire,
-   * pour que le nouveau score s'affiche immédiatement).
-   */
+  async function retry() {
+    if (!_lastRequest || loading.value) return;
+    const { puzzleDate, gameType, limit, offset } = _lastRequest;
+    await fetchLeaderboard(puzzleDate, gameType, limit, offset, {
+      bypassCache: true,
+    });
+  }
+
   function invalidateCache(puzzleDate, gameType = "hearts") {
     invalidateLeaderboardCache(puzzleDate, gameType);
   }
@@ -188,6 +235,7 @@ export function useLeaderboard() {
     currentUserRank,
     fetchLeaderboard,
     loadMore,
+    retry,
     invalidateCache,
     reset,
   };

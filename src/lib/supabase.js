@@ -7,25 +7,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 // Toutes les fonctions d'auth vérifient cette condition avant d'appeler Supabase,
 // ce qui permet à l'app de fonctionner sans configuration (mode anonyme uniquement).
 
-// Implémentation personnalisée du verrou Web Locks.
-// Le SDK utilise ce verrou pour sérialiser les opérations de token (lecture ET
-// refresh) entre onglets. Tous les onglets partagent le même verrou (même nom,
-// dérivé de l'URL Supabase).
-//
-// POURQUOI PAS DE TIMEOUT :
-// Un timeout (même long) sur l'ACQUISITION du verrou provoque des erreurs
-// sur TOUTES les requêtes DB des onglets en attente si l'onglet détenteur
-// prend plus longtemps que prévu (réseau lent, onglet suspendu par le navigateur
-// mobile, etc.). On attend donc indéfiniment : les refreshs de token durent
-// 1-5 s en conditions normales, et le navigateur libère automatiquement le
-// verrou à la fermeture / navigation de l'onglet → pas de deadlock permanent.
-function customLock(name, _acquireTimeout, fn) {
-  if (typeof navigator !== 'undefined' && navigator.locks) {
-    return navigator.locks.request(name, fn)
-  }
-  // Fallback : Firefox en navigation privée et vieux navigateurs sans Web Locks
-  return fn()
-}
+// Supabase fournit déjà une implémentation Web Locks qui respecte
+// `lockAcquireTimeout` et convertit l’échec d’acquisition en erreur exploitable.
+// Ne pas la remplacer par un verrou sans délai : un onglet suspendu pourrait
+// sinon laisser les requêtes des autres onglets en attente indéfiniment.
 
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -39,10 +24,9 @@ export const supabase = supabaseUrl && supabaseAnonKey
         // la seconde trouvant le verifier PKCE déjà consommé → erreur 401.
         detectSessionInUrl: false,
         flowType: 'pkce',
-        // Verrou sans timeout : attend indéfiniment l'acquisition du lock.
-        // Élimine les TimeoutError sur les requêtes DB quand un autre onglet
-        // détient le verrou pendant un refresh de token. Voir customLock ci-dessus.
-        lock: customLock,
+        // Valeur explicite : un lock détenu trop longtemps produit une erreur
+        // récupérable au lieu de laisser les requêtes attendre indéfiniment.
+        lockAcquireTimeout: 10_000,
       },
     })
   : null
