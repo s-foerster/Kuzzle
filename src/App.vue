@@ -167,6 +167,7 @@ import UserAvatar from "./components/UserAvatar.vue";
 import TutorialModal from "./components/TutorialModal.vue";
 import AuthModal from "./components/Auth/AuthModal.vue";
 import CookieBanner from "./components/CookieBanner.vue";
+import { syncGameResults } from "./services/gameResults.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -239,10 +240,19 @@ function handleOutsideClick(e) {
     themePickerOpen.value = false;
   }
 }
-onMounted(() => document.addEventListener("mousedown", handleOutsideClick));
-onUnmounted(() =>
-  document.removeEventListener("mousedown", handleOutsideClick),
-);
+function syncCurrentUserResults() {
+  if (!authStore.user?.id) return;
+  syncGameResults({ userId: authStore.user.id });
+}
+
+onMounted(() => {
+  document.addEventListener("mousedown", handleOutsideClick);
+  window.addEventListener("online", syncCurrentUserResults);
+});
+onUnmounted(() => {
+  document.removeEventListener("mousedown", handleOutsideClick);
+  window.removeEventListener("online", syncCurrentUserResults);
+});
 
 // Sync thème depuis Supabase après chargement du profil
 watch(
@@ -252,9 +262,17 @@ watch(
   },
 );
 
+watch(
+  () => authStore.user?.id,
+  (userId, previousUserId) => {
+    if (userId && userId !== previousUserId) syncCurrentUserResults();
+  },
+);
+
 onMounted(async () => {
   // Initialise la session Supabase (silencieux si Supabase non configuré)
   await authStore.init();
+  syncCurrentUserResults();
 });
 </script>
 

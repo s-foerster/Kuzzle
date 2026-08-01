@@ -6,6 +6,10 @@ import { ref, computed } from "vue";
 const _cache = new Map();
 const CACHE_TTL_MS = 60_000; // 60 secondes
 
+export function invalidateLeaderboardCache(puzzleDate, gameType = "hearts") {
+  _cache.delete(`${puzzleDate}_${gameType}`);
+}
+
 /**
  * Composable leaderboard pour un puzzle donné.
  *
@@ -21,6 +25,7 @@ export function useLeaderboard() {
   const total = ref(0);
   const loading = ref(false);
   const error = ref(null);
+  const currentUserResult = ref(null);
 
   // Clé du puzzle actuellement chargé (pour loadMore)
   let _currentDate = null;
@@ -30,8 +35,11 @@ export function useLeaderboard() {
   const topEntries = computed(() => entries.value.slice(0, 3));
 
   // Entrée de l'utilisateur connecté (is_current_user = true)
-  const currentUserEntry = computed(() =>
-    entries.value.find((e) => e.is_current_user) ?? null,
+  const currentUserEntry = computed(
+    () =>
+      currentUserResult.value ??
+      entries.value.find((e) => e.is_current_user) ??
+      null,
   );
 
   // Rang de l'utilisateur connecté
@@ -44,6 +52,7 @@ export function useLeaderboard() {
     total.value = 0;
     error.value = null;
     loading.value = false;
+    currentUserResult.value = null;
     _currentDate = null;
     _currentType = null;
   }
@@ -59,6 +68,7 @@ export function useLeaderboard() {
     if (offset === 0 && cached && now - cached.timestamp < CACHE_TTL_MS) {
       entries.value = cached.entries;
       total.value = cached.total;
+      currentUserResult.value = cached.currentUserEntry ?? null;
       _currentDate = puzzleDate;
       _currentType = gameType;
       return;
@@ -73,12 +83,25 @@ export function useLeaderboard() {
       const { supabase } = await import("../lib/supabase.js");
       if (!supabase) throw new Error("Supabase non disponible");
 
-      const { data, error: rpcError } = await supabase.rpc("get_leaderboard", {
-        p_puzzle_date: puzzleDate,
-        p_game_type: gameType,
-        p_limit: limit,
-        p_offset: offset,
-      });
+      const leaderboardRequest = supabase.rpc("get_leaderboard", {
+          p_puzzle_date: puzzleDate,
+          p_game_type: gameType,
+          p_limit: limit,
+          p_offset: offset,
+        });
+      const [leaderboardResponse, currentUserResponse] =
+        offset === 0
+          ? await Promise.all([
+              leaderboardRequest,
+              supabase.rpc("get_my_leaderboard_entry", {
+                p_puzzle_date: puzzleDate,
+                p_game_type: gameType,
+              }),
+            ])
+          : [await leaderboardRequest, null];
+
+      const { data, error: rpcError } = leaderboardResponse;
+      const currentUserError = currentUserResponse?.error;
 
       if (rpcError) {
         // Utilisateur non connecté : erreur de permission attendue
@@ -90,11 +113,17 @@ export function useLeaderboard() {
         }
         return;
       }
+      if (currentUserError) {
+        error.value = currentUserError.message;
+        console.error("[useLeaderboard] Current-user RPC error:", currentUserError);
+        return;
+      }
 
       const rows = data || [];
 
       if (offset === 0) {
         entries.value = rows;
+        currentUserResult.value = currentUserResponse?.data?.[0] ?? null;
       } else {
         // Fusion sans doublons lors du loadMore
         const existingRanks = new Set(entries.value.map((e) => e.rank));
@@ -103,13 +132,19 @@ export function useLeaderboard() {
         }
       }
 
-      total.value = rows.length > 0 ? Number(rows[0].total_count) : total.value;
+      total.value =
+        rows.length > 0
+          ? Number(rows[0].total_count)
+          : currentUserResult.value
+            ? Number(currentUserResult.value.total_count)
+            : 0;
 
       // Mettre en cache uniquement le premier chargement (offset = 0)
       if (offset === 0) {
         _cache.set(cacheKey, {
           entries: entries.value,
           total: total.value,
+          currentUserEntry: currentUserResult.value,
           timestamp: now,
         });
       }
@@ -140,7 +175,7 @@ export function useLeaderboard() {
    * pour que le nouveau score s'affiche immédiatement).
    */
   function invalidateCache(puzzleDate, gameType = "hearts") {
-    _cache.delete(`${puzzleDate}_${gameType}`);
+    invalidateLeaderboardCache(puzzleDate, gameType);
   }
 
   return {

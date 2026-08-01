@@ -43,12 +43,15 @@ export const useAuthStore = defineStore('auth', () => {
     if (data) profile.value = data
   }
 
-  async function createProfile(userId, usernameValue, avatarUrlValue = null) {
-    if (!supabase) return
-    const { error: err } = await supabase
-      .from('profiles')
-      .insert({ id: userId, username: usernameValue, avatar_url: avatarUrlValue })
-    if (err) console.warn('[auth] createProfile error:', err.message)
+  async function ensureProfile(userId) {
+    if (!supabase || !userId) return
+    const { error: ensureError } = await supabase.rpc('ensure_my_profile')
+    if (ensureError) {
+      console.warn('[auth] ensureProfile error:', ensureError.message)
+      await fetchProfile(userId)
+      return
+    }
+    await fetchProfile(userId)
   }
 
   // ── Listener de session ─────────────────────────────────────────────────
@@ -73,26 +76,8 @@ export const useAuthStore = defineStore('auth', () => {
       // pour récupérer le token JWT → deadlock de 10s puis timeout.
       if (session?.user) {
         if (event === 'SIGNED_IN') {
-          // À la connexion : on récupère le profil d'abord, et SEULEMENT si absent
-          // on le crée. Enchaîner dans le .then() évite la race condition où
-          // profile.value est encore null au moment du check (fetchProfile étant async).
-          const userId     = session.user.id
-          const googleName   = session.user.user_metadata?.full_name
-          const googleAvatar = session.user.user_metadata?.avatar_url
-          const defaultUsername = (googleName || session.user.email?.split('@')[0] || 'joueur')
-            .toLowerCase()
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, '')
-            .slice(0, 20)
-
-          fetchProfile(userId).then(() => {
-            if (!profile.value) {
-              // Profil inexistant → première connexion Google/OAuth
-              createProfile(userId, defaultUsername, googleAvatar)
-                .then(() => fetchProfile(userId))
-                .catch(console.error)
-            }
-          }).catch(console.error)
+          // La RPC idempotente répare aussi les anciens comptes sans profil.
+          ensureProfile(session.user.id).catch(console.error)
         } else if (!profile.value || profile.value.id !== session.user.id) {
           // Autres événements (TOKEN_REFRESHED, etc.) : simple rechargement
           fetchProfile(session.user.id).catch(console.error)
@@ -155,7 +140,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (session?.user) {
           user.value = session.user
           if (!profile.value || profile.value.id !== session.user.id) {
-            await fetchProfile(session.user.id)
+            await ensureProfile(session.user.id)
           }
         } else {
           user.value    = null
@@ -214,12 +199,15 @@ export const useAuthStore = defineStore('auth', () => {
       const { data, error: err } = await supabase.auth.signUp({
         email: emailVal,
         password: passwordVal,
+        options: {
+          // Le trigger DB peut créer le profil avant même la confirmation e-mail.
+          data: { username: usernameVal },
+        },
       })
       if (err) { error.value = err.message; return { error: err.message } }
 
-      if (data.user) {
-        await createProfile(data.user.id, usernameVal)
-        await fetchProfile(data.user.id)
+      if (data.user && data.session) {
+        await ensureProfile(data.user.id)
       }
       return { data }
     } finally {
@@ -338,7 +326,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn, isPremium, preferredTheme, username, avatarUrl,
     // Actions
     init, loginWithEmail, register, loginWithGoogle, logout, updateUsername,
-    fetchProfile, setPreferredTheme,
+    fetchProfile, ensureProfile, setPreferredTheme,
     // Modal
     openAuthModal, closeAuthModal,
   }

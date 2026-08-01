@@ -64,6 +64,11 @@
               </div>
             </div>
           </div>
+          <ResultSyncStatus
+            v-if="authStore.isLoggedIn"
+            :status="currentResultSyncStatus"
+            @retry="retryCurrentResultSync"
+          />
           <div class="victory-leaderboard">
             <PremiumGate :blur="true" label="le classement">
               <LeaderboardPanel
@@ -264,17 +269,21 @@ import LumizleGrid from "../components/Lumizle/LumizleGrid.vue";
 import LumizleRules from "../components/Lumizle/LumizleRules.vue";
 import LumizleRulesModal from "../components/Lumizle/LumizleRulesModal.vue";
 import LeaderboardPanel from "../components/LeaderboardPanel.vue";
+import ResultSyncStatus from "../components/ResultSyncStatus.vue";
 import PremiumGate from "../components/PremiumGate.vue";
 import { useLumizle } from "../composables/useLumizle.js";
 import { CELL_LIGHT } from "../algorithms/lumizle/rules.js";
-import { useLeaderboard } from "../composables/useLeaderboard.js";
+import {
+  gameResultStatuses,
+  gameResultsSyncRevision,
+  syncGameResults,
+} from "../services/gameResults.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
 import lumizleCacheData from "../../lumizle-cache.json";
 
 const navStore = useNavigationStore();
 const authStore = useAuthStore();
-const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
 const leaderboardRefreshTrigger = ref(0);
 
 // ── Modal de règles pré-jeu ───────────────────────────────────────────────────
@@ -341,6 +350,19 @@ const todayKey = getDateKey(new Date());
 const currentArchiveDate = ref(todayKey);
 
 const lumizleCurrentLevelId = computed(() => lumizleCurrentDate.value || null);
+
+const currentResultSyncStatus = computed(() => {
+  if (!lumizleCurrentLevelId.value) return "idle";
+  return (
+    gameResultStatuses.value[`lumizle:${lumizleCurrentLevelId.value}`]?.status ??
+    "idle"
+  );
+});
+
+async function retryCurrentResultSync() {
+  const result = await syncGameResults({ userId: authStore.user?.id });
+  if (result.success) leaderboardRefreshTrigger.value += 1;
+}
 
 const lumizleFormattedDate = computed(() => {
   const id = lumizleCurrentLevelId.value;
@@ -559,36 +581,22 @@ const lumizleCompletedLevels = ref(
   JSON.parse(localStorage.getItem(LS_KEY) || "[]"),
 );
 
+watch(gameResultsSyncRevision, () => {
+  try {
+    const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+    lumizleCompletedLevels.value = Array.isArray(local) ? local : [];
+    if (!lumizleIsTimerStarted.value) checkAndFillIfCompleted();
+  } catch {
+    // Le jeu reste utilisable si localStorage est indisponible.
+  }
+});
+
 async function syncCompletedFromSupabase() {
   if (!authStore.isLoggedIn) return;
   try {
-    const { supabase } = await import("../lib/supabase.js");
-    if (!supabase) return;
-
-    const { data, error: fetchError } = await supabase
-      .from("game_results")
-      .select("puzzle_date, time_seconds")
-      .eq("user_id", authStore.user.id)
-      .eq("game_type", "lumizle")
-      .eq("completed", true);
-
-    if (fetchError) {
-      console.error("❌ [LumizleView] Erreur sync niveaux:", fetchError.message);
-      return;
-    }
-
-    const remoteIds = (data || []).map((r) => r.puzzle_date);
+    await syncGameResults({ userId: authStore.user.id });
     const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-    const merged = [...new Set([...local, ...remoteIds])];
-
-    for (const row of data || []) {
-      if (row.time_seconds != null) {
-        lumizleSaveLevelStats(row.puzzle_date, row.time_seconds);
-      }
-    }
-
-    lumizleCompletedLevels.value = merged;
-    localStorage.setItem(LS_KEY, JSON.stringify(merged));
+    lumizleCompletedLevels.value = Array.isArray(local) ? local : [];
     if (!lumizleIsTimerStarted.value) {
       checkAndFillIfCompleted();
     }
@@ -649,37 +657,9 @@ watch(lumizleIsWon, async (won) => {
     lumizleSaveLevelStats(id, lumizleElapsedSeconds.value);
   }
 
-  // Supabase : sauvegarde pour tous les puzzles avec une date YYYY-MM-DD
-  const isDateKey = /^\d{4}-\d{2}-\d{2}$/.test(id);
-  if (authStore.isLoggedIn && isDateKey && lumizleIsWonByUserInSession.value) {
-    try {
-      const { supabase } = await import("../lib/supabase.js");
-      if (supabase) {
-        const { error: saveError } = await supabase.from("game_results").upsert(
-          {
-            user_id: authStore.user.id,
-            game_type: "lumizle",
-            puzzle_date: id,
-            completed: true,
-            time_seconds: lumizleElapsedSeconds.value,
-            verify_count: 0,
-          },
-          { onConflict: "user_id,game_type,puzzle_date" },
-        );
-        if (saveError) {
-          console.error(
-            "❌ [LumizleView] Erreur sauvegarde Supabase:",
-            saveError.message || saveError,
-          );
-        } else {
-          console.log("✅ [LumizleView] Résultat sauvegardé dans Supabase");
-          invalidateLeaderboardCache(id, "lumizle");
-          leaderboardRefreshTrigger.value++;
-        }
-      }
-    } catch (e) {
-      console.error("❌ [LumizleView] Supabase save exception:", e);
-    }
+  if (authStore.isLoggedIn && lumizleIsWonByUserInSession.value) {
+    const result = await syncGameResults({ userId: authStore.user.id });
+    if (result.success) leaderboardRefreshTrigger.value += 1;
   }
 });
 

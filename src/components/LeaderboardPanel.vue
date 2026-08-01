@@ -155,6 +155,7 @@
 import { computed, watch } from "vue";
 import { useLeaderboard } from "../composables/useLeaderboard.js";
 import { useAuthStore } from "../stores/auth.js";
+import { gameResultsSyncRevision } from "../services/gameResults.js";
 
 const props = defineProps({
   puzzleDate: { type: String, required: true },
@@ -173,6 +174,7 @@ const {
   currentUserRank,
   fetchLeaderboard,
   loadMore,
+  invalidateCache,
   reset,
 } = useLeaderboard();
 
@@ -212,12 +214,14 @@ watch(
   { immediate: true },
 );
 
-// Si l'utilisateur se connecte après le mount, charger le classement
+// Recharger sans cache à chaque changement de compte : les marqueurs "toi" et
+// la ligne personnelle dépendent de l'utilisateur authentifié.
 watch(
-  () => authStore.isLoggedIn,
-  (loggedIn) => {
-    if (loggedIn && props.puzzleDate) {
+  () => authStore.user?.id,
+  (userId, previousUserId) => {
+    if (userId && userId !== previousUserId && props.puzzleDate) {
       reset();
+      invalidateCache(props.puzzleDate, props.gameType);
       fetchLeaderboard(props.puzzleDate, props.gameType);
     }
   },
@@ -233,6 +237,15 @@ watch(
     }
   },
 );
+
+// Une synchronisation peut arriver après une reconnexion ou depuis une autre vue.
+// La révision globale garantit que le score et le rang courant sont rafraîchis.
+watch(gameResultsSyncRevision, () => {
+  if (props.puzzleDate && authStore.isLoggedIn) {
+    reset();
+    fetchLeaderboard(props.puzzleDate, props.gameType);
+  }
+});
 </script>
 
 <style scoped>

@@ -227,18 +227,20 @@
       <!-- ── Import localStorage ─────────────────────────────────────────── -->
       <Transition name="fade">
         <div
-          v-if="localImportCount > 0 || importSuccess"
+          v-if="localImportCount > 0 || importSuccess || importError"
           class="profil-section profil-section--import"
         >
           <div class="import-header">
             <div class="import-icon">📦</div>
             <div class="import-text">
-              <p class="import-title">Historique local détecté</p>
+              <p class="import-title">Synchronisation des scores</p>
               <p class="import-sub">
-                {{ localImportCount }} niveau{{
-                  localImportCount > 1 ? "x" : ""
-                }}
-                complété{{ localImportCount > 1 ? "s" : "" }} hors connexion
+                <template v-if="localImportCount > 0">
+                  {{ localImportCount }} performance{{
+                    localImportCount > 1 ? "s" : ""
+                  }} en attente
+                </template>
+                <template v-else>Historique local à jour</template>
               </p>
             </div>
           </div>
@@ -249,15 +251,16 @@
           >
             {{
               importing
-                ? "Import en cours…"
+                ? "Synchronisation…"
                 : importSuccess
-                  ? "Importé !"
-                  : `Importer ${localImportCount} niveau${localImportCount > 1 ? "x" : ""}`
+                  ? "Synchronisé !"
+                  : "Réessayer"
             }}
           </button>
           <p v-if="importSuccess" class="field-success">
-            Historique importé avec succès.
+            Historique synchronisé avec succès.
           </p>
+          <p v-else-if="importError" class="field-error">{{ importError }}</p>
         </div>
       </Transition>
 
@@ -501,6 +504,13 @@ import { useTheme } from "../composables/useTheme.js";
 import { supabase } from "../lib/supabase.js";
 import PremiumGate from "../components/PremiumGate.vue";
 import PremiumFeaturesList from "../components/PremiumFeaturesList.vue";
+import {
+  fetchAllRemoteGameResults,
+  gameResultsPendingCount,
+  gameResultsSyncRevision,
+  gameResultsSyncing,
+  syncGameResults,
+} from "../services/gameResults.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -593,7 +603,7 @@ async function saveUsername() {
 
 // ── Données stats (chargées depuis Supabase) ──────────────────────────────
 const loadingStats = ref(true);
-const allResults = ref([]); // max 365 résultats, ordre DESC
+const allResults = ref([]); // historique complet, ordre DESC
 
 const stats = ref({
   heartsGames: 0,
@@ -641,89 +651,32 @@ function showMore() {
   displayCount.value += 20;
 }
 
-// ── Import depuis localStorage ────────────────────────────────────────────
-const importCandidates = ref([]);
-const importing = ref(false);
+// ── Synchronisation depuis localStorage ───────────────────────────────────
+const importing = gameResultsSyncing;
 const importSuccess = ref(false);
+const importError = ref("");
 
-const localImportCount = computed(() => importCandidates.value.length);
+const localImportCount = computed(() => gameResultsPendingCount.value);
 
 const DAILY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function computeImportCandidates() {
-  const existing = new Set(
-    allResults.value.map((r) => `${r.game_type}:${r.puzzle_date}`),
-  );
-  const candidates = [];
-  try {
-    const heartsStats = JSON.parse(
-      localStorage.getItem("hearts-level-stats") || "{}",
-    );
-    const lumizleStats = JSON.parse(
-      localStorage.getItem("lumizle-level-stats") || "{}",
-    );
-    const hearts = JSON.parse(
-      localStorage.getItem("hearts-completed-levels") || "[]",
-    );
-    for (const d of hearts) {
-      if (DAILY_RE.test(d) && !existing.has(`hearts:${d}`))
-        candidates.push({
-          game_type: "hearts",
-          puzzle_date: d,
-          time_seconds: heartsStats[d]?.elapsedTime ?? null,
-          verify_count: heartsStats[d]?.verifyCount ?? null,
-        });
-    }
-    const lumizle = JSON.parse(
-      localStorage.getItem("lumizle-completed-levels") || "[]",
-    );
-    for (const d of lumizle) {
-      if (DAILY_RE.test(d) && !existing.has(`lumizle:${d}`))
-        candidates.push({
-          game_type: "lumizle",
-          puzzle_date: d,
-          time_seconds: lumizleStats[d]?.elapsedSeconds ?? null,
-          verify_count: 0,
-        });
-    }
-  } catch (_) {
-    /* localStorage peut être inaccessible */
-  }
-  importCandidates.value = candidates;
-}
-
 async function importLocalHistory() {
-  if (!supabase || !authStore.user || importing.value) return;
-  importing.value = true;
+  if (!authStore.user || importing.value) return;
   importSuccess.value = false;
-  try {
-    const rows = importCandidates.value.map((c) => ({
-      user_id: authStore.user.id,
-      game_type: c.game_type,
-      puzzle_date: c.puzzle_date,
-      completed: true,
-      time_seconds: c.time_seconds,
-      verify_count: c.verify_count,
-    }));
-    // Insérer par lots de 50 pour éviter les requêtes trop grandes
-    const BATCH = 50;
-    for (let i = 0; i < rows.length; i += BATCH) {
-      await supabase.from("game_results").upsert(rows.slice(i, i + BATCH), {
-        onConflict: "user_id,game_type,puzzle_date",
-        ignoreDuplicates: true,
-      });
-    }
-    importCandidates.value = [];
-    importSuccess.value = true;
-    await loadStats();
-    setTimeout(() => {
-      importSuccess.value = false;
-    }, 4000);
-  } catch (e) {
-    console.warn("[ProfilView] Import error:", e);
-  } finally {
-    importing.value = false;
+  importError.value = "";
+
+  const result = await syncGameResults({ userId: authStore.user.id });
+  if (!result.success) {
+    importError.value =
+      "La synchronisation a échoué. Vérifiez votre connexion puis réessayez.";
+    return;
   }
+
+  importSuccess.value = true;
+  await loadStats();
+  setTimeout(() => {
+    importSuccess.value = false;
+  }, 4000);
 }
 
 // ── Calcul des streaks (jours calendaires consécutifs) ────────────────────
@@ -799,39 +752,28 @@ async function loadStats() {
       timeoutId = setTimeout(() => reject(new Error("timeout")), 10000);
     });
 
-    const { data, error } = await Promise.race([
-      supabase
-        .from("game_results")
-        .select("*")
-        .eq("user_id", authStore.user.id)
-        .order("created_at", { ascending: false })
-        .limit(365),
+    const data = await Promise.race([
+      fetchAllRemoteGameResults(authStore.user.id),
       timeoutPromise,
     ]);
     clearTimeout(timeoutId);
 
-    if (error) {
-      // Table inexistante (42P01) ou autre erreur DB → dégradation gracieuse
-      console.info(
-        "[ProfilView] game_results inaccessible:",
-        error.code,
-        error.message,
-      );
-      return;
-    }
-
     if (data) {
-      allResults.value = data;
+      allResults.value = [...data].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at),
+      );
 
-      const hearts = data.filter((r) => r.game_type === "hearts");
-      const lumizle = data.filter((r) => r.game_type === "lumizle");
+      const hearts = allResults.value.filter((r) => r.game_type === "hearts");
+      const lumizle = allResults.value.filter(
+        (r) => r.game_type === "lumizle",
+      );
 
-      const minTime = (arr) =>
-        arr.length
-          ? formatSeconds(
-              Math.min(...arr.map((r) => r.time_seconds).filter(Boolean)),
-            )
-          : null;
+      const minTime = (arr) => {
+        const times = arr
+          .map((r) => r.time_seconds)
+          .filter((time) => Number.isInteger(time) && time > 0);
+        return times.length ? formatSeconds(Math.min(...times)) : null;
+      };
 
       stats.value = {
         heartsGames: hearts.length,
@@ -844,8 +786,6 @@ async function loadStats() {
         hearts: calcStreak("hearts"),
         lumizle: calcStreak("lumizle"),
       };
-
-      computeImportCandidates();
     }
   } catch (e) {
     console.info("[ProfilView] loadStats interrompu:", e.message);
@@ -864,6 +804,11 @@ function formatSeconds(s) {
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
+  if (!DAILY_RE.test(dateStr)) {
+    return dateStr
+      .replace(/_/g, " ")
+      .replace(/^./, (letter) => letter.toUpperCase());
+  }
   try {
     const [y, m, d] = dateStr.split("-").map(Number);
     return new Date(y, m - 1, d).toLocaleDateString("fr-FR", {
@@ -927,6 +872,10 @@ function handleLogout() {
 
 // Déclencher le chargement des stats quand l'utilisateur devient disponible
 // (ou change de compte). { immediate: true } couvre aussi le cas du mount initial.
+watch(gameResultsSyncRevision, () => {
+  if (authStore.user) loadStats();
+});
+
 watch(
   () => authStore.user,
   (newUser, oldUser) => {

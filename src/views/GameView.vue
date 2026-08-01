@@ -55,6 +55,11 @@
               ✨ Sans-faute
             </div>
           </div>
+          <ResultSyncStatus
+            v-if="authStore.isLoggedIn"
+            :status="currentResultSyncStatus"
+            @retry="retryCurrentResultSync"
+          />
           <!-- Classement intégré dans la carte victoire -->
           <div class="victory-leaderboard">
             <PremiumGate :blur="true" label="le classement">
@@ -342,13 +347,18 @@ import { useRouter } from "vue-router";
 import GameGrid from "../components/GameGrid.vue";
 import HowToPlayModal from "../components/HowToPlay/HowToPlayModal.vue";
 import LeaderboardPanel from "../components/LeaderboardPanel.vue";
+import ResultSyncStatus from "../components/ResultSyncStatus.vue";
 import PremiumGate from "../components/PremiumGate.vue";
 import PremiumFeaturesList from "../components/PremiumFeaturesList.vue";
 import { useGame } from "../composables/useGame.js";
 import { useNavigationStore } from "../stores/navigation.js";
 import { useAuthStore } from "../stores/auth.js";
 import { useSubscription } from "../composables/useSubscription.js";
-import { useLeaderboard } from "../composables/useLeaderboard.js";
+import {
+  gameResultStatuses,
+  gameResultsSyncRevision,
+  syncGameResults,
+} from "../services/gameResults.js";
 import puzzleCacheData from "../../puzzle-cache.json";
 
 const router = useRouter();
@@ -359,8 +369,6 @@ const {
   loading: paywallLoading,
   error: paywallError,
 } = useSubscription();
-
-const { invalidateCache: invalidateLeaderboardCache } = useLeaderboard();
 
 // Trigger rechargement du LeaderboardPanel après sauvegarde victoire
 const leaderboardRefreshTrigger = ref(0);
@@ -748,6 +756,16 @@ function loadArchiveDay(day) {
 const LS_KEY = "hearts-completed-levels";
 const completedLevels = ref(JSON.parse(localStorage.getItem(LS_KEY) || "[]"));
 
+watch(gameResultsSyncRevision, () => {
+  try {
+    const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+    completedLevels.value = Array.isArray(local) ? local : [];
+    if (!isTimerStarted.value) checkAndFillIfCompleted();
+  } catch {
+    // Le jeu reste utilisable si localStorage est indisponible.
+  }
+});
+
 /**
  * Fusionne les niveaux complétés depuis Supabase avec ceux du localStorage.
  * On fait l'UNION (jamais de suppression) pour ne pas perdre de données locales.
@@ -756,31 +774,9 @@ const completedLevels = ref(JSON.parse(localStorage.getItem(LS_KEY) || "[]"));
 async function syncCompletedFromSupabase() {
   if (!authStore.isLoggedIn) return;
   try {
-    const { supabase } = await import("../lib/supabase.js");
-    if (!supabase) return;
-
-    const { data, error: fetchError } = await supabase
-      .from("game_results")
-      .select("puzzle_date")
-      .eq("user_id", authStore.user.id)
-      .eq("game_type", "hearts")
-      .eq("completed", true);
-
-    if (fetchError) {
-      console.error("❌ [GameView] Erreur sync niveaux:", fetchError.message);
-      return;
-    }
-
-    const remoteIds = (data || []).map((r) => r.puzzle_date);
+    await syncGameResults({ userId: authStore.user.id });
     const local = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-    // Union sans doublons
-    const merged = [...new Set([...local, ...remoteIds])];
-
-    completedLevels.value = merged;
-    localStorage.setItem(LS_KEY, JSON.stringify(merged));
-    console.log(
-      `✅ [GameView] ${merged.length} niveaux complétés synchronisés`,
-    );
+    completedLevels.value = Array.isArray(local) ? local : [];
 
     // Re-déclencher le check pour le puzzle actuellement affiché
     // Pas d'auto-fill si l'utilisateur est en train de jouer (timer démarré mais pas encore gagné)
@@ -802,6 +798,18 @@ const currentLevelId = computed(() => {
   }
   return currentDate.value;
 });
+
+const currentResultSyncStatus = computed(() => {
+  if (!currentLevelId.value) return "idle";
+  return (
+    gameResultStatuses.value[`hearts:${currentLevelId.value}`]?.status ?? "idle"
+  );
+});
+
+async function retryCurrentResultSync() {
+  const result = await syncGameResults({ userId: authStore.user?.id });
+  if (result.success) leaderboardRefreshTrigger.value += 1;
+}
 
 const isCurrentLevelCompleted = computed(
   () =>
@@ -874,42 +882,11 @@ watch(isWon, async (won) => {
     localStorage.setItem(LS_KEY, JSON.stringify(completedLevels.value));
   }
 
-  // Supabase (si connecté, puzzle quotidien, ET timer démarré = vraie victoire et non rechargement
-  // d'un niveau déjà complété via fillWithSolution, ce qui évite d'écraser les stats avec des zéros)
-  if (
-    authStore.isLoggedIn &&
-    !currentDate.value.startsWith("practice_") &&
-    isWonByUserInSession.value
-  ) {
-    try {
-      const { supabase } = await import("../lib/supabase.js");
-      if (supabase) {
-        const { error: saveError } = await supabase.from("game_results").upsert(
-          {
-            user_id: authStore.user.id,
-            game_type: "hearts",
-            puzzle_date: completedId,
-            completed: true,
-            time_seconds: elapsedTime.value,
-            verify_count: verifyCount.value,
-          },
-          { onConflict: "user_id,game_type,puzzle_date" },
-        );
-        if (saveError) {
-          console.error(
-            "❌ [GameView] Erreur sauvegarde Supabase:",
-            saveError.message || saveError,
-          );
-        } else {
-          console.log("✅ [GameView] Résultat sauvegardé dans Supabase");
-          // Invalider le cache leaderboard pour que la victoire s'affiche immédiatement
-          invalidateLeaderboardCache(completedId, "hearts");
-          leaderboardRefreshTrigger.value++;
-        }
-      }
-    } catch (e) {
-      console.error("❌ [GameView] Supabase save exception:", e);
-    }
+  // Le service inclut aussi les entraînements et garde le résultat local en
+  // attente si le réseau ou Supabase est indisponible.
+  if (authStore.isLoggedIn && isWonByUserInSession.value) {
+    const result = await syncGameResults({ userId: authStore.user.id });
+    if (result.success) leaderboardRefreshTrigger.value += 1;
   }
 });
 
