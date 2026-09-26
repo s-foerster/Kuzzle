@@ -14,6 +14,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Derrière un reverse proxy (Koyeb + routeur multi-apps), on fait confiance à
+// X-Forwarded-For pour que le rate-limit voie la vraie IP du client.
+// TRUST_PROXY=1 (nombre de proxys de confiance). Non défini = comportement d'origine.
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set('trust proxy', Number.isNaN(hops) ? process.env.TRUST_PROXY : hops);
+}
 const PORT = process.env.PORT || 3000;
 
 // Cache persistant sur disque
